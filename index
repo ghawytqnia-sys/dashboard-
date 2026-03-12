@@ -1,0 +1,3087 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>لوحة التحكم — نسب عرض العربي</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+// Load PptxGenJS with fallback
+(function(){
+  var urls=[
+    'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js',
+    'https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js'
+  ];
+  var idx=0;
+  function tryLoad(){
+    if(idx>=urls.length)return;
+    var s=document.createElement('script');
+    s.src=urls[idx++];
+    s.onerror=tryLoad;
+    document.head.appendChild(s);
+  }
+  tryLoad();
+})();
+</script>
+<style>
+:root{
+  --p:#0ea5e9;--pd:#0284c7;--pl:#38bdf8;
+  --ac:#06b6d4;--ac2:#67e8f9;
+  --bg:#060e1e;--bg2:#0a1628;--bg3:#0f2040;
+  --glass:rgba(14,165,233,.07);--gb:rgba(14,165,233,.22);--gs:rgba(14,165,233,.14);
+  --tx:#e0f2fe;--tm:#7dd3fc;
+  --r:14px;--rs:10px;
+  --g1:#34d399;--g2:#10b981;
+  --y1:#fbbf24;--y2:#f59e0b;
+  --r1:#f87171;--r2:#ef4444;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Cairo','Tajawal',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse 70% 50% at 10% 10%,rgba(6,182,212,.1) 0%,transparent 55%),
+             radial-gradient(ellipse 50% 70% at 90% 90%,rgba(14,165,233,.08) 0%,transparent 55%),
+             linear-gradient(170deg,#060e1e 0%,#09152a 60%,#06101e 100%);pointer-events:none}
+body::after{content:'';position:fixed;inset:0;z-index:0;
+  background-image:linear-gradient(rgba(14,165,233,.03) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(14,165,233,.03) 1px,transparent 1px);
+  background-size:50px 50px;pointer-events:none}
+.app{position:relative;z-index:1;display:flex;min-height:100vh}
+
+/* ── Sidebar ── */
+.sidebar{width:260px;min-height:100vh;background:rgba(6,14,30,.95);border-left:1px solid var(--gb);backdrop-filter:blur(24px);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;transition:transform .3s;z-index:50}
+.sb-logo{padding:0 20px 18px;border-bottom:1px solid var(--gb);margin-bottom:10px}
+.sb-logo .icon{font-size:32px;filter:drop-shadow(0 0 12px var(--p))}
+.sb-logo h2{font-size:14px;font-weight:900;background:linear-gradient(135deg,var(--ac2),var(--p));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-top:5px;line-height:1.4}
+.sb-logo p{font-size:11px;color:var(--tm);margin-top:2px}
+.fb-status{display:flex;align-items:center;gap:8px;padding:8px 20px 12px;font-size:11px;font-weight:700;color:var(--tm)}
+.fb-dot{width:8px;height:8px;border-radius:50%;background:#6b7280;flex-shrink:0;transition:background .4s}
+.fb-dot.ok{background:#10b981;box-shadow:0 0 6px #10b981;animation:fbp 2s infinite}
+.fb-dot.err{background:#ef4444}
+@keyframes fbp{0%,100%{opacity:1}50%{opacity:.3}}
+.nav-section{padding:6px 20px 4px;font-size:10px;font-weight:700;color:rgba(125,211,252,.4);letter-spacing:1.5px;text-transform:uppercase;margin-top:6px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:11px 20px;color:var(--tm);font-size:13px;font-weight:600;cursor:pointer;border-right:3px solid transparent;transition:all .2s;user-select:none}
+.nav-item:hover{background:var(--glass);color:var(--tx)}
+.nav-item.active{background:linear-gradient(90deg,rgba(14,165,233,.15),transparent);color:var(--pl);border-right-color:var(--p)}
+.nav-item .ni{font-size:16px;width:20px;text-align:center}
+.nav-badge{margin-right:auto;background:var(--pd);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px}
+.sb-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--gb);font-size:10px;color:var(--tm);text-align:center;line-height:1.6}
+
+/* ── Main ── */
+.main{flex:1;overflow-x:hidden;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 26px;background:rgba(6,14,30,.85);border-bottom:1px solid var(--gb);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:10px}
+.topbar h1{font-size:clamp(14px,2.2vw,18px);font-weight:900;background:linear-gradient(135deg,var(--ac2),var(--pl));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.topbar-sub{font-size:11px;color:var(--tm);margin-top:2px}
+.topbar-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border:none;border-radius:50px;font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;white-space:nowrap}
+.btn-excel{background:linear-gradient(135deg,#14532d,#16a34a);color:#fff;box-shadow:0 4px 14px rgba(22,163,74,.3)}
+.btn-excel:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(22,163,74,.4)}
+.btn-ppt{background:linear-gradient(135deg,#7c2d12,#c2410c);color:#fff;box-shadow:0 4px 14px rgba(194,65,12,.3)}
+.btn-ppt:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(194,65,12,.4)}
+.btn-clear{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5}
+.btn-clear:hover{background:rgba(239,68,68,.22)}
+.hamburger{display:none;background:none;border:none;color:var(--tx);font-size:22px;cursor:pointer;padding:4px}
+@media(max-width:768px){
+  .hamburger{display:block}
+  .sidebar{position:fixed;top:0;right:0;transform:translateX(100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:49}
+  .sb-overlay.show{display:block}
+  .content{padding:16px 12px}
+}
+.content{padding:24px 26px;flex:1}
+
+/* ── Page sections ── */
+.page{display:none}.page.active{display:block}
+
+/* ── KPI ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:450px){.kpi-grid{grid-template-columns:1fr}}
+.kpi-card{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:18px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.kpi-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(14,165,233,.18)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-card.blue::before{background:linear-gradient(90deg,var(--pd),var(--ac2))}
+.kpi-card.green::before{background:linear-gradient(90deg,#065f46,#10b981)}
+.kpi-card.yellow::before{background:linear-gradient(90deg,#78350f,#f59e0b)}
+.kpi-card.dyn::before{background:linear-gradient(90deg,#1d4ed8,#06b6d4)}
+.kpi-label{font-size:11px;color:var(--tm);font-weight:600;margin-bottom:6px}
+.kpi-value{font-size:clamp(22px,3vw,32px);font-weight:900;line-height:1}
+.kpi-card.blue .kpi-value{color:var(--ac2)}
+.kpi-card.green .kpi-value{color:#34d399}
+.kpi-card.yellow .kpi-value{color:#fbbf24}
+.kpi-card.dyn .kpi-value{background:linear-gradient(135deg,var(--ac2),var(--pl));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.kpi-sub{font-size:10px;color:var(--tm);margin-top:5px}
+.kpi-icon{position:absolute;top:12px;left:12px;font-size:24px;opacity:.2}
+
+/* ── Charts ── */
+.charts-row{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:22px}
+@media(max-width:800px){.charts-row{grid-template-columns:1fr}}
+.chart-card{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:18px}
+.chart-title{font-size:13px;font-weight:700;color:var(--tm);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.chart-wrap{position:relative;height:210px}
+
+/* ── Table ── */
+.tbl-card{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:18px;margin-bottom:20px;overflow-x:auto}
+.tbl-title{font-size:14px;font-weight:700;color:var(--ac2);margin-bottom:14px}
+table.dt{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+table.dt th{background:rgba(14,165,233,.12);color:var(--tm);font-weight:700;padding:10px 12px;text-align:right;border-bottom:1px solid var(--gb);white-space:nowrap}
+table.dt td{padding:10px 12px;border-bottom:1px solid rgba(14,165,233,.07);transition:background .15s;white-space:nowrap}
+table.dt tr:hover td{background:rgba(14,165,233,.05)}
+table.dt tr:last-child td{border-bottom:none}
+.pbadge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.pbadge.high{background:rgba(16,185,129,.15);color:#34d399}
+.pbadge.mid{background:rgba(245,158,11,.15);color:#fbbf24}
+.pbadge.low{background:rgba(239,68,68,.15);color:#f87171}
+.del-btn{background:none;border:none;color:#f87171;cursor:pointer;font-size:14px;padding:3px 7px;border-radius:6px;transition:background .15s}
+.del-btn:hover{background:rgba(239,68,68,.15)}
+
+/* ── Branch cards ── */
+.branch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-bottom:22px}
+.bcard{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:18px;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s,border-color .2s}
+.bcard:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(14,165,233,.2);border-color:var(--p)}
+.bcard.selected{border-color:var(--p);background:rgba(14,165,233,.12);box-shadow:0 0 20px rgba(14,165,233,.2)}
+.bcard::before{content:'';position:absolute;top:0;right:0;width:3px;height:100%;background:linear-gradient(180deg,var(--p),var(--ac))}
+.bcard-name{font-size:14px;font-weight:700;color:var(--ac2);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.bcard-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.bs-v{font-size:17px;font-weight:900;color:var(--tx);text-align:center}
+.bs-l{font-size:10px;color:var(--tm);text-align:center}
+.bbar{height:6px;background:rgba(14,165,233,.12);border-radius:20px;overflow:hidden;margin-bottom:5px}
+.bbar-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--pd),var(--ac2));width:0%;transition:width 1.1s cubic-bezier(.4,0,.2,1)}
+.bbar-pcts{font-size:10px;color:var(--tm);display:flex;justify-content:space-between}
+
+/* ── Branch filter bar ── */
+.branch-filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;padding:14px 18px;background:var(--glass);border:1px solid var(--gb);border-radius:var(--r)}
+.branch-filter-bar label{font-size:12px;font-weight:700;color:var(--tm);white-space:nowrap}
+.branch-filter-bar select{background:rgba(14,165,233,.1);border:1px solid var(--gb);border-radius:8px;color:var(--tx);font-family:'Cairo',sans-serif;font-size:13px;padding:7px 12px;outline:none;cursor:pointer;transition:border-color .2s;min-width:200px}
+.branch-filter-bar select:focus{border-color:var(--p)}
+.filter-reset{background:rgba(14,165,233,.12);border:1px solid var(--gb);border-radius:8px;color:var(--tm);font-family:'Cairo',sans-serif;font-size:12px;padding:7px 14px;cursor:pointer;transition:all .2s}
+.filter-reset:hover{background:rgba(14,165,233,.22);color:var(--tx)}
+
+/* ── Branch detail panel ── */
+.branch-detail{background:var(--glass);border:1px solid var(--p);border-radius:var(--r);padding:22px;margin-bottom:22px;animation:fadeIn .3s ease}
+.branch-detail-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.branch-detail-title{font-size:18px;font-weight:900;color:var(--ac2);display:flex;align-items:center;gap:8px}
+.branch-close-btn{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5;font-family:'Cairo',sans-serif;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;transition:all .2s}
+.branch-close-btn:hover{background:rgba(239,68,68,.25)}
+.branch-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:700px){.branch-kpis{grid-template-columns:repeat(2,1fr)}}
+.bkpi{background:rgba(14,165,233,.06);border:1px solid rgba(14,165,233,.15);border-radius:10px;padding:14px;text-align:center}
+.bkpi-val{font-size:24px;font-weight:900;color:var(--ac2)}
+.bkpi-lbl{font-size:10px;color:var(--tm);margin-top:4px}
+.branch-charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+@media(max-width:700px){.branch-charts-row{grid-template-columns:1fr}}
+
+/* ── Statistics page ── */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px}
+@media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.stats-grid{grid-template-columns:1fr}}
+.stat-card{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:18px;position:relative;overflow:hidden}
+.stat-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.stat-card-title{font-size:13px;font-weight:700;color:var(--tm)}
+.stat-card-icon{font-size:22px;opacity:.4}
+.stat-rank{display:flex;flex-direction:column;gap:8px}
+.rank-item{display:flex;align-items:center;gap:10px}
+.rank-num{width:22px;height:22px;border-radius:50%;background:rgba(14,165,233,.15);color:var(--ac2);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rank-name{flex:1;font-size:12px;font-weight:600;color:var(--tx)}
+.rank-val{font-size:12px;font-weight:700;color:var(--ac2)}
+.rank-bar-wrap{flex:1;height:4px;background:rgba(14,165,233,.1);border-radius:10px;overflow:hidden}
+.rank-bar-fill{height:100%;background:linear-gradient(90deg,var(--pd),var(--ac2));border-radius:10px;transition:width 1s ease}
+.timeline-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(14,165,233,.06)}
+.timeline-item:last-child{border-bottom:none}
+.tl-dot{width:8px;height:8px;border-radius:50%;background:var(--p);flex-shrink:0;margin-top:5px}
+.tl-info{flex:1}
+.tl-branch{font-size:12px;font-weight:700;color:var(--tx)}
+.tl-detail{font-size:11px;color:var(--tm);margin-top:2px}
+.tl-pct{font-size:13px;font-weight:700;flex-shrink:0;margin-top:2px}
+
+/* ── Section header ── */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.sec-header h2{font-size:15px;font-weight:700;color:var(--ac2);display:flex;align-items:center;gap:7px}
+.dot-live{width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 5px #10b981;display:inline-block;animation:dl 2s infinite}
+@keyframes dl{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Page title ── */
+.page-title{margin-bottom:20px}
+.page-title h2{font-size:20px;font-weight:900;color:var(--ac2);display:flex;align-items:center;gap:8px}
+.page-title p{font-size:12px;color:var(--tm);margin-top:4px}
+
+/* ── Empty/Loading ── */
+.empty{text-align:center;padding:60px 20px;color:var(--tm)}
+.empty .ei{font-size:56px;opacity:.35;margin-bottom:14px}
+.empty h3{font-size:17px;font-weight:700;color:var(--tx);margin-bottom:6px}
+.empty p{font-size:13px;opacity:.65}
+.loading-state{text-align:center;padding:50px 20px}
+.lds{display:inline-block;width:36px;height:36px;border:3px solid rgba(14,165,233,.2);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:22px;right:22px;background:linear-gradient(135deg,#065f46,#059669);border:1px solid rgba(16,185,129,.4);border-radius:12px;padding:12px 20px;color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;display:flex;align-items:center;gap:9px;box-shadow:0 8px 28px rgba(16,185,129,.4);transform:translateY(100px);opacity:0;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .3s;z-index:9999;pointer-events:none;max-width:320px}
+.toast.err{background:linear-gradient(135deg,#7f1d1d,#ef4444);border-color:rgba(239,68,68,.4)}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* ── Progress bar in PPT btn ── */
+.btn-ppt.loading{pointer-events:none;opacity:.7}
+.progress-bar{display:none;height:2px;background:linear-gradient(90deg,var(--p),var(--ac2));border-radius:2px;position:absolute;bottom:0;left:0;animation:pbarAnim 1.5s infinite}
+@keyframes pbarAnim{0%{left:0%;width:30%}50%{left:35%;width:40%}100%{left:70%;width:30%}}
+
+/* ── Comparison Page ── */
+.cmp-filter{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 20px;background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);margin-bottom:22px}
+.cmp-filter label{font-size:12px;font-weight:700;color:var(--tm);white-space:nowrap}
+.cmp-filter select{background:rgba(14,165,233,.1);border:1px solid var(--gb);border-radius:8px;color:var(--tx);font-family:'Cairo',sans-serif;font-size:13px;padding:7px 12px;outline:none;cursor:pointer;min-width:180px}
+.cmp-filter select:focus{border-color:var(--p)}
+.cmp-run-btn{background:linear-gradient(135deg,#1d4ed8,#0ea5e9);border:none;border-radius:8px;color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;padding:8px 20px;cursor:pointer;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 14px rgba(14,165,233,.3)}
+.cmp-run-btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(14,165,233,.4)}
+.cmp-hero{display:grid;grid-template-columns:1fr auto 1fr;gap:0;margin-bottom:22px;align-items:stretch}
+@media(max-width:700px){.cmp-hero{grid-template-columns:1fr}}
+.cmp-side{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:22px;position:relative;overflow:hidden}
+.cmp-side.before{border-color:rgba(248,113,113,.3)}
+.cmp-side.after{border-color:rgba(52,211,153,.3)}
+.cmp-side-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:14px}
+.cmp-side.before .cmp-side-tag{background:rgba(248,113,113,.15);color:#f87171}
+.cmp-side.after .cmp-side-tag{background:rgba(52,211,153,.15);color:#34d399}
+.cmp-side-title{font-size:16px;font-weight:700;color:var(--tm);margin-bottom:4px}
+.cmp-side-date{font-size:11px;color:var(--tm);opacity:.7;margin-bottom:16px}
+.cmp-big-pct{font-size:52px;font-weight:900;line-height:1;margin-bottom:6px}
+.cmp-side.before .cmp-big-pct{color:#f87171}
+.cmp-side.after .cmp-big-pct{color:#34d399}
+.cmp-meta-row{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap}
+.cmp-meta{text-align:center}
+.cmp-meta-v{font-size:18px;font-weight:700;color:var(--tx)}
+.cmp-meta-l{font-size:10px;color:var(--tm)}
+.cmp-arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 12px;gap:8px}
+.cmp-delta-box{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:14px 18px;text-align:center;min-width:110px}
+.cmp-delta-val{font-size:28px;font-weight:900}
+.cmp-delta-lbl{font-size:11px;color:var(--tm);margin-top:4px}
+.cmp-delta-arrow{font-size:32px}
+.cmp-sections-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+@media(max-width:700px){.cmp-sections-grid{grid-template-columns:1fr}}
+.cmp-sec-card{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:18px}
+.cmp-sec-card-title{font-size:13px;font-weight:700;color:var(--ac2);margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.cmp-sec-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(14,165,233,.06)}
+.cmp-sec-row:last-child{border-bottom:none}
+.cmp-sec-name{flex:1;font-size:12px;font-weight:600;color:var(--tx)}
+.cmp-sec-bars{flex:2;display:flex;flex-direction:column;gap:3px}
+.cmp-bar-row{display:flex;align-items:center;gap:6px;font-size:10px}
+.cmp-bar-label{width:28px;text-align:left;color:var(--tm)}
+.cmp-bar-track{flex:1;height:5px;background:rgba(14,165,233,.1);border-radius:10px;overflow:hidden}
+.cmp-bar-fill-b{height:100%;border-radius:10px;background:rgba(248,113,113,.7)}
+.cmp-bar-fill-a{height:100%;border-radius:10px;background:rgba(52,211,153,.7)}
+.cmp-sec-delta{width:44px;text-align:left;font-size:11px;font-weight:700}
+.cmp-timeline{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:18px;margin-bottom:22px}
+.cmp-timeline-title{font-size:13px;font-weight:700;color:var(--ac2);margin-bottom:14px}
+.cmp-tl-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(14,165,233,.06);position:relative}
+.cmp-tl-row:last-child{border-bottom:none}
+.cmp-tl-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.cmp-tl-info{flex:1}
+.cmp-tl-agent{font-size:12px;font-weight:700;color:var(--tx)}
+.cmp-tl-date{font-size:10px;color:var(--tm);margin-top:2px}
+.cmp-tl-pct{font-size:15px;font-weight:900;flex-shrink:0}
+.cmp-tl-change{font-size:11px;font-weight:700;flex-shrink:0;min-width:50px;text-align:left}
+.cmp-chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+@media(max-width:700px){.cmp-chart-row{grid-template-columns:1fr}}
+.no-data-cmp{text-align:center;padding:60px 20px;color:var(--tm)}
+.no-data-cmp .ei{font-size:56px;opacity:.3;margin-bottom:14px}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.fi{animation:fadeIn .45s ease both}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--pd);border-radius:10px}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     LOGIN SCREEN — يظهر قبل الداشبورد
+     يستخدم Firebase REST API (يعمل مع file:// و content://)
+     ══════════════════════════════════════════════════════════ -->
+<div id="loginScreen" style="display:flex;position:fixed;inset:0;z-index:9999;background:#060e1e;align-items:center;justify-content:center;overflow:hidden;">
+
+  <!-- خلفية متحركة -->
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 10% 10%,rgba(6,182,212,.12),transparent 55%),radial-gradient(ellipse 50% 70% at 90% 90%,rgba(14,165,233,.1),transparent 55%);pointer-events:none;"></div>
+  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(14,165,233,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(14,165,233,.03) 1px,transparent 1px);background-size:50px 50px;pointer-events:none;"></div>
+  <div id="lsParticles" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
+
+  <!-- بطاقة تسجيل الدخول -->
+  <div id="loginCard" style="position:relative;z-index:2;width:100%;max-width:410px;padding:20px;">
+    <div style="background:rgba(10,22,40,.92);border:1px solid rgba(14,165,233,.22);border-radius:20px;padding:38px 32px;backdrop-filter:blur(30px);box-shadow:0 0 0 1px rgba(14,165,233,.05),0 24px 64px rgba(0,0,0,.55),0 0 80px rgba(14,165,233,.07);animation:lsCardIn .5s cubic-bezier(.34,1.2,.64,1) both;">
+
+      <!-- اللوجو -->
+      <div style="text-align:center;margin-bottom:28px;">
+        <div style="width:70px;height:70px;border-radius:18px;background:linear-gradient(135deg,rgba(14,165,233,.2),rgba(6,182,212,.15));border:1px solid rgba(14,165,233,.35);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 14px;animation:lsPulse 3s ease-in-out infinite;">📊</div>
+        <div style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#67e8f9,#38bdf8,#67e8f9);background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:lsShimmer 3s linear infinite;margin-bottom:5px;">نظام نسب عرض العربي</div>
+        <div style="font-size:12px;color:#7dd3fc;">منصة إدارة وتحليل بيانات الفروع</div>
+      </div>
+
+      <!-- تنبيه -->
+      <div id="lsAlert" style="display:none;border-radius:10px;padding:11px 15px;font-size:13px;font-weight:600;align-items:center;gap:9px;margin-bottom:16px;">
+        <span id="lsAlertIcon" style="font-size:18px;flex-shrink:0;"></span>
+        <span id="lsAlertMsg"></span>
+      </div>
+
+      <!-- حقل البريد -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:700;color:#7dd3fc;margin-bottom:7px;">📧 البريد الإلكتروني</div>
+        <div style="position:relative;">
+          <span style="position:absolute;top:50%;right:13px;transform:translateY(-50%);font-size:15px;opacity:.45;pointer-events:none;">✉️</span>
+          <input id="lsEmail" type="email" placeholder="example@company.com" autocomplete="email"
+            style="width:100%;background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:10px;color:#e0f2fe;font-family:'Cairo',sans-serif;font-size:14px;padding:12px 42px 12px 16px;outline:none;transition:all .25s;direction:ltr;text-align:right;"
+            onfocus="this.style.borderColor='#0ea5e9';this.style.background='rgba(14,165,233,.11)';this.style.boxShadow='0 0 0 3px rgba(14,165,233,.13)'"
+            onblur="this.style.borderColor='rgba(14,165,233,.2)';this.style.background='rgba(14,165,233,.07)';this.style.boxShadow='none'"/>
+        </div>
+        <div id="lsEmailErr" style="display:none;font-size:11px;font-weight:600;color:#f87171;margin-top:5px;padding:4px 8px;background:rgba(239,68,68,.08);border-radius:6px;">⚠️ <span id="lsEmailErrTxt"></span></div>
+      </div>
+
+      <!-- حقل كلمة المرور -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:700;color:#7dd3fc;margin-bottom:7px;">🔒 كلمة المرور</div>
+        <div style="position:relative;">
+          <span style="position:absolute;top:50%;right:13px;transform:translateY(-50%);font-size:15px;opacity:.45;pointer-events:none;">🔒</span>
+          <input id="lsPass" type="password" placeholder="أدخل كلمة المرور" autocomplete="current-password"
+            style="width:100%;background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:10px;color:#e0f2fe;font-family:'Cairo',sans-serif;font-size:14px;padding:12px 42px 12px 42px;outline:none;transition:all .25s;direction:ltr;text-align:right;"
+            onfocus="this.style.borderColor='#0ea5e9';this.style.background='rgba(14,165,233,.11)';this.style.boxShadow='0 0 0 3px rgba(14,165,233,.13)'"
+            onblur="this.style.borderColor='rgba(14,165,233,.2)';this.style.background='rgba(14,165,233,.07)';this.style.boxShadow='none'"/>
+          <button onclick="lsTogglePwd()" tabindex="-1" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;opacity:.55;padding:4px;color:#7dd3fc;" id="lsEyeBtn">👁️</button>
+        </div>
+        <div id="lsPassErr" style="display:none;font-size:11px;font-weight:600;color:#f87171;margin-top:5px;padding:4px 8px;background:rgba(239,68,68,.08);border-radius:6px;">⚠️ <span id="lsPassErrTxt"></span></div>
+      </div>
+
+      <!-- صف تذكرني / نسيت المرور -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;">
+          <input type="checkbox" id="lsRemember" style="width:15px;height:15px;cursor:pointer;accent-color:#0ea5e9;"/>
+          <span style="font-size:12px;color:#7dd3fc;font-weight:600;">تذكرني</span>
+        </label>
+        <span onclick="lsOpenReset()" style="font-size:12px;color:#67e8f9;cursor:pointer;font-weight:700;">نسيت كلمة المرور؟</span>
+      </div>
+
+      <!-- زر الدخول -->
+      <button id="lsLoginBtn" onclick="lsDoLogin()"
+        style="width:100%;padding:13px;border:none;border-radius:12px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:15px;font-weight:900;background:linear-gradient(135deg,#0284c7,#06b6d4);color:#fff;box-shadow:0 6px 22px rgba(14,165,233,.32);transition:transform .2s,box-shadow .2s;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;"
+        onmouseenter="if(!this.disabled)this.style.transform='translateY(-2px)'"
+        onmouseleave="if(!this.disabled)this.style.transform='none'">
+        <span id="lsBtnTxt">🔐 دخول</span>
+        <div id="lsBtnSpinner" style="display:none;width:17px;height:17px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:lsSpin .7s linear infinite;flex-shrink:0;"></div>
+      </button>
+
+      <!-- فاصل -->
+      <div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#7dd3fc;font-size:12px;">
+        <div style="flex:1;height:1px;background:rgba(14,165,233,.15);"></div> أو <div style="flex:1;height:1px;background:rgba(14,165,233,.15);"></div>
+      </div>
+
+      <!-- Google -->
+      <button onclick="lsShowGoogleNote()"
+        style="width:100%;padding:11px;border:1px solid rgba(14,165,233,.25);border-radius:12px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;background:rgba(14,165,233,.06);color:#e0f2fe;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:9px;"
+        onmouseenter="this.style.background='rgba(14,165,233,.13)';this.style.borderColor='#0ea5e9'"
+        onmouseleave="this.style.background='rgba(14,165,233,.06)';this.style.borderColor='rgba(14,165,233,.25)'">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        متابعة مع Google
+      </button>
+
+      <div style="text-align:center;margin-top:18px;font-size:11px;color:rgba(125,211,252,.35);line-height:1.7;">
+        نظام نسب عرض العربي &nbsp;•&nbsp; <br/>جميع الحقوق محفوظة AbdElmonem © 2026
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ مودال استعادة كلمة المرور ══ -->
+<div id="lsResetModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(5px);">
+  <div style="background:rgba(10,22,40,.97);border:1px solid rgba(14,165,233,.22);border-radius:18px;padding:30px;max-width:340px;width:100%;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:lsCardIn .4s cubic-bezier(.34,1.2,.64,1) both;">
+    <button onclick="lsCloseReset()" style="position:absolute;top:12px;left:12px;background:none;border:none;color:#7dd3fc;font-size:18px;cursor:pointer;width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;">✕</button>
+    <div style="font-size:16px;font-weight:900;color:#67e8f9;margin-bottom:5px;">🔑 استعادة كلمة المرور</div>
+    <div style="font-size:12px;color:#7dd3fc;margin-bottom:18px;">أدخل بريدك وسنرسل رابط إعادة التعيين</div>
+    <div id="lsResetAlert" style="display:none;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:600;align-items:center;gap:8px;margin-bottom:12px;"><span id="lsRAIcon"></span><span id="lsRAMsg"></span></div>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:#7dd3fc;margin-bottom:7px;">📧 البريد الإلكتروني</div>
+      <div style="position:relative;">
+        <span style="position:absolute;top:50%;right:13px;transform:translateY(-50%);font-size:15px;opacity:.45;pointer-events:none;">✉️</span>
+        <input id="lsResetEmail" type="email" placeholder="example@company.com"
+          style="width:100%;background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:10px;color:#e0f2fe;font-family:'Cairo',sans-serif;font-size:14px;padding:11px 42px 11px 16px;outline:none;transition:all .25s;direction:ltr;text-align:right;"/>
+      </div>
+    </div>
+    <button id="lsResetBtn" onclick="lsDoReset()"
+      style="width:100%;padding:12px;border:none;border-radius:12px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:14px;font-weight:900;background:linear-gradient(135deg,#0284c7,#06b6d4);color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span id="lsResetBtnTxt">📨 إرسال رابط الاستعادة</span>
+      <div id="lsResetSpinner" style="display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:lsSpin .7s linear infinite;"></div>
+    </button>
+  </div>
+</div>
+
+<!-- ══ شاشة الانتقال ══ -->
+<div id="lsTransition" style="display:none;position:fixed;inset:0;z-index:10001;background:#060e1e;flex-direction:column;align-items:center;justify-content:center;gap:18px;">
+  <div style="width:52px;height:52px;border:4px solid rgba(14,165,233,.15);border-top-color:#0ea5e9;border-radius:50%;animation:lsSpin .8s linear infinite;"></div>
+  <div style="font-size:16px;font-weight:700;color:#67e8f9;">✅ تم تسجيل الدخول بنجاح!</div>
+  <div style="font-size:13px;color:#7dd3fc;">جاري تحميل لوحة التحكم...</div>
+</div>
+
+<style>
+@keyframes lsCardIn{from{opacity:0;transform:translateY(26px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+@keyframes lsPulse{0%,100%{box-shadow:0 0 24px rgba(14,165,233,.2);}50%{box-shadow:0 0 44px rgba(14,165,233,.38);}}
+@keyframes lsShimmer{0%{background-position:200%;}100%{background-position:-200%;}}
+@keyframes lsSpin{to{transform:rotate(360deg)}}
+@keyframes lsParticle{0%{opacity:0;transform:translateY(100vh);}10%{opacity:.5;}90%{opacity:.2;}100%{opacity:0;transform:translateY(-20px);}}
+</style>
+
+<script>
+// ══════════════════════════════════════════════════
+// Firebase REST API — تعمل مع file:// و content://
+// ══════════════════════════════════════════════════
+const LS_API_KEY = 'AIzaSyAmzZoKM_YGQAlxHdj6N-s4iUegBrJKNAk';
+const LS_PROJECT = 'display-a3abe';
+const LS_AUTH    = 'https://identitytoolkit.googleapis.com/v1/accounts';
+const LS_FS      = `https://firestore.googleapis.com/v1/projects/${LS_PROJECT}/databases/(default)/documents`;
+const LS_SESSION = 'arabi_auth_session';
+
+// تسجيل دخول بالبريد وكلمة المرور
+async function lsFbSignIn(email, password) {
+  const r = await fetch(`${LS_AUTH}:signInWithPassword?key=${LS_API_KEY}`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({email, password, returnSecureToken:true})
+  });
+  const d = await r.json();
+  if (!r.ok) throw {code: d.error?.message || 'UNKNOWN'};
+  return d;
+}
+
+// تجديد التوكن المنتهي
+async function lsFbRefresh(refreshToken) {
+  const r = await fetch(`https://securetoken.googleapis.com/v1/token?key=${LS_API_KEY}`, {
+    method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body: `grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`
+  });
+  const d = await r.json();
+  if (!r.ok) throw d;
+  return d;
+}
+
+// جلب بروفايل المستخدم من Firestore
+async function lsFbGetProfile(uid, idToken) {
+  try {
+    const r = await fetch(`${LS_FS}/users/${uid}`, {headers:{'Authorization':'Bearer '+idToken}});
+    if (!r.ok) return null;
+    const d = await r.json();
+    const f = d.fields || {};
+    return {name: f.name?.stringValue||'', role: f.role?.stringValue||'agent', branch: f.branch?.stringValue||'—'};
+  } catch(e) { return null; }
+}
+
+// إرسال بريد استعادة كلمة المرور
+async function lsFbReset(email) {
+  const r = await fetch(`${LS_AUTH}:sendOobCode?key=${LS_API_KEY}`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({requestType:'PASSWORD_RESET', email})
+  });
+  const d = await r.json();
+  if (!r.ok) throw {code: d.error?.message||'UNKNOWN'};
+}
+
+// حفظ الجلسة
+function lsSaveSession(auth, profile) {
+  const s = {
+    uid: auth.localId, email: auth.email,
+    name: profile?.name || auth.displayName || auth.email,
+    role: profile?.role || 'agent',
+    idToken: auth.idToken, refreshToken: auth.refreshToken,
+    expires: Date.now() + parseInt(auth.expiresIn)*1000,
+    profile: profile || {}
+  };
+  localStorage.setItem(LS_SESSION, JSON.stringify(s));
+  return s;
+}
+
+function lsLoadSession() {
+  try { return JSON.parse(localStorage.getItem(LS_SESSION)); } catch(e) { return null; }
+}
+
+function lsClearSession() { localStorage.removeItem(LS_SESSION); }
+
+// ══ فحص الجلسة عند التحميل ══
+async function lsCheckSession() {
+  const s = lsLoadSession();
+  if (!s) return; // لا يوجد جلسة → أبقِ شاشة الدخول
+
+  if (Date.now() < s.expires - 60000) {
+    // التوكن ما زال صالحاً
+    lsEnterDashboard();
+    return;
+  }
+
+  // التوكن منتهي → جدّده
+  if (s.refreshToken) {
+    try {
+      const ref = await lsFbRefresh(s.refreshToken);
+      s.idToken = ref.id_token;
+      s.refreshToken = ref.refresh_token;
+      s.expires = Date.now() + parseInt(ref.expires_in)*1000;
+      localStorage.setItem(LS_SESSION, JSON.stringify(s));
+      lsEnterDashboard();
+    } catch(e) { lsClearSession(); }
+  }
+}
+
+// ══ تسجيل الدخول ══
+async function lsDoLogin() {
+  lsClearAlert();
+  const email = document.getElementById('lsEmail').value.trim();
+  const pass  = document.getElementById('lsPass').value;
+  let ok = true;
+  if (!email || !lsIsEmail(email)) { lsShowFErr('lsEmailErr','lsEmailErrTxt','بريد إلكتروني غير صحيح'); ok=false; } else lsHideFErr('lsEmailErr');
+  if (!pass) { lsShowFErr('lsPassErr','lsPassErrTxt','أدخل كلمة المرور'); ok=false; } else lsHideFErr('lsPassErr');
+  if (!ok) return;
+
+  lsSetLoading(true);
+  try {
+    const auth = await lsFbSignIn(email, pass);
+    const profile = await lsFbGetProfile(auth.localId, auth.idToken);
+    lsSaveSession(auth, profile);
+    lsShowTransition();
+    setTimeout(lsEnterDashboard, 1200);
+  } catch(e) {
+    lsSetLoading(false);
+    lsShowAlert(lsFbErr(e.code), 'err');
+  }
+}
+
+// ══ إظهار شاشة الانتقال ثم إخفاء Login ══
+function lsShowTransition() {
+  const t = document.getElementById('lsTransition');
+  t.style.display = 'flex';
+}
+
+
+// إظهار معلومات المستخدم في الشاشة الجانبية
+function lsShowUserInSidebar(){
+  try{
+    const s=JSON.parse(localStorage.getItem('arabi_auth_session')||'null');
+    if(!s)return;
+    const el=document.getElementById('sbUserInfo');
+    const nm=document.getElementById('sbUserName');
+    const em=document.getElementById('sbUserEmail');
+    const rl=document.getElementById('sbUserRole');
+    if(!el)return;
+    el.style.display='block';
+    if(nm)nm.textContent='👤 '+(s.name||s.email||'—');
+    if(em)em.textContent=s.email||'';
+    const roleMap={admin:'🛡️ مدير النظام',supervisor:'👔 مشرف',agent:'👤 مندوب'};
+    const roleCls={admin:'background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3)',supervisor:'background:rgba(14,165,233,.15);color:#67e8f9;border:1px solid rgba(14,165,233,.3)',agent:'background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3)'};
+    const role=s.role||'agent';
+    if(rl)rl.innerHTML=`<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;${roleCls[role]||roleCls.agent}">${roleMap[role]||'👤 مندوب'}</span>`;
+  }catch(e){}
+}
+
+function lsEnterDashboard() {
+  const ls = document.getElementById('loginScreen');
+  const lt = document.getElementById('lsTransition');
+  if (ls) ls.style.display = 'none';
+  if (lt) lt.style.display = 'none';
+  setTimeout(lsShowUserInSidebar, 100);
+}
+
+// ══ استعادة كلمة المرور ══
+function lsOpenReset() {
+  document.getElementById('lsResetEmail').value = document.getElementById('lsEmail').value;
+  document.getElementById('lsResetAlert').style.display = 'none';
+  document.getElementById('lsResetModal').style.display = 'flex';
+}
+function lsCloseReset() { document.getElementById('lsResetModal').style.display = 'none'; }
+
+async function lsDoReset() {
+  const email = document.getElementById('lsResetEmail').value.trim();
+  if (!email || !lsIsEmail(email)) { lsShowResetAlert('أدخل بريداً إلكترونياً صحيحاً','err'); return; }
+  document.getElementById('lsResetBtn').disabled = true;
+  document.getElementById('lsResetBtnTxt').textContent = '';
+  document.getElementById('lsResetSpinner').style.display = 'block';
+  try {
+    await lsFbReset(email);
+    lsShowResetAlert('✅ تم الإرسال! تحقق من بريدك.','ok');
+    setTimeout(lsCloseReset, 3000);
+  } catch(e) {
+    lsShowResetAlert(lsFbErr(e.code),'err');
+  } finally {
+    document.getElementById('lsResetBtn').disabled = false;
+    document.getElementById('lsResetBtnTxt').textContent = '📨 إرسال رابط الاستعادة';
+    document.getElementById('lsResetSpinner').style.display = 'none';
+  }
+}
+
+// ملاحظة Google
+function lsShowGoogleNote() {
+  lsShowAlert('ℹ️ تسجيل الدخول بـ Google يتطلب فتح الملف عبر سيرفر (http). استخدم البريد وكلمة المرور.','info');
+}
+
+// ══ Helpers ══
+function lsTogglePwd() {
+  const inp = document.getElementById('lsPass');
+  const btn = document.getElementById('lsEyeBtn');
+  inp.type = inp.type==='password'?'text':'password';
+  btn.textContent = inp.type==='password'?'👁️':'🙈';
+}
+function lsIsEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+function lsSetLoading(on) {
+  const btn=document.getElementById('lsLoginBtn');
+  btn.disabled=on;
+  document.getElementById('lsBtnTxt').style.opacity=on?.4:1;
+  document.getElementById('lsBtnSpinner').style.display=on?'block':'none';
+  btn.style.transform='none';
+}
+function lsShowAlert(msg,type) {
+  const el=document.getElementById('lsAlert');
+  const icons={err:'❌',ok:'✅',info:'ℹ️'};
+  document.getElementById('lsAlertIcon').textContent=icons[type]||'⚠️';
+  document.getElementById('lsAlertMsg').textContent=msg;
+  el.style.cssText=`display:flex;border-radius:10px;padding:11px 15px;font-size:13px;font-weight:600;align-items:center;gap:9px;margin-bottom:16px;${type==='err'?'background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5;':type==='ok'?'background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:#6ee7b7;':'background:rgba(14,165,233,.1);border:1px solid rgba(14,165,233,.25);color:#67e8f9;'}`;
+}
+function lsClearAlert() { document.getElementById('lsAlert').style.display='none'; }
+function lsShowResetAlert(msg,type) {
+  const el=document.getElementById('lsResetAlert');
+  const icons={err:'❌',ok:'✅'};
+  document.getElementById('lsRAIcon').textContent=icons[type]||'⚠️';
+  document.getElementById('lsRAMsg').textContent=msg;
+  el.style.cssText=`display:flex;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:600;align-items:center;gap:8px;margin-bottom:12px;${type==='err'?'background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5;':'background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:#6ee7b7;'}`;
+}
+function lsShowFErr(wid,tid,msg){document.getElementById(tid).textContent=msg;document.getElementById(wid).style.display='flex';}
+function lsHideFErr(wid){document.getElementById(wid).style.display='none';}
+
+function lsFbErr(code) {
+  const m={
+    'EMAIL_NOT_FOUND':'لا يوجد حساب بهذا البريد الإلكتروني',
+    'INVALID_PASSWORD':'كلمة المرور غير صحيحة',
+    'INVALID_LOGIN_CREDENTIALS':'البريد أو كلمة المرور غير صحيحة',
+    'INVALID_EMAIL':'البريد الإلكتروني غير صحيح',
+    'USER_DISABLED':'هذا الحساب موقوف، تواصل مع المسؤول',
+    'TOO_MANY_ATTEMPTS_TRY_LATER':'تم تجاوز عدد المحاولات، انتظر قليلاً',
+    'NETWORK_ERROR':'خطأ في الشبكة، تحقق من الاتصال بالإنترنت',
+  };
+  for(const k of Object.keys(m)) if(String(code).includes(k)) return m[k];
+  return 'حدث خطأ: '+(code||'غير معروف');
+}
+
+// جسيمات الخلفية
+(function lsInitParticles(){
+  const c=document.getElementById('lsParticles');
+  if(!c)return;
+  for(let i=0;i<18;i++){
+    const p=document.createElement('div');
+    p.style.cssText=`position:absolute;width:${1+Math.random()*2}px;height:${1+Math.random()*2}px;background:#67e8f9;border-radius:50%;left:${Math.random()*100}%;opacity:0;animation:lsParticle ${7+Math.random()*10}s ${Math.random()*12}s linear infinite;`;
+    c.appendChild(p);
+  }
+})();
+
+// Enter key
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&document.getElementById('loginScreen')?.style.display!=='none') lsDoLogin();
+  if(e.key==='Escape') lsCloseReset();
+});
+
+// فحص الجلسة الموجودة
+lsCheckSession();
+</script>
+
+
+<div class="app">
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-logo">
+    <div class="icon">📊</div>
+    <h2>نظام نسب عرض العربي</h2>
+    <p>لوحة التحكم والتحليلات</p>
+  </div>
+  <div class="fb-status">
+    <div class="fb-dot" id="fbDot"></div>
+    <span id="fbStatusTxt">جاري الاتصال...</span>
+  </div>
+
+  <div class="nav-section">القائمة الرئيسية</div>
+  <div class="nav-item active" data-page="overview" onclick="switchPage('overview',this)">
+    <span class="ni">🏠</span> نظرة عامة
+  </div>
+  <div class="nav-item" data-page="reports" onclick="switchPage('reports',this)">
+    <span class="ni">📋</span> جميع التقارير
+    <span class="nav-badge" id="navBadgeReports">0</span>
+  </div>
+
+  <div class="nav-section">التحليلات</div>
+  <div class="nav-item" data-page="branches" onclick="switchPage('branches',this)">
+    <span class="ni">🏢</span> تحليل الفروع
+    <span class="nav-badge" id="navBadgeBranches">0</span>
+  </div>
+  <div class="nav-item" data-page="statistics" onclick="switchPage('statistics',this)">
+    <span class="ni">📊</span> الإحصائيات
+  </div>
+  <div class="nav-item" data-page="comparison" onclick="switchPage('comparison',this)">
+    <span class="ni">🔄</span> مقارنة قبل/بعد
+    <span class="nav-badge" id="navBadgeComparison" style="background:#7c3aed">جديد</span>
+  </div>
+
+  <div class="sb-footer">
+  <div id="sbUserInfo" style="margin-bottom:10px;padding:10px 12px;background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.18);border-radius:10px;display:none;">
+    <div style="font-size:11px;font-weight:700;color:#67e8f9;" id="sbUserName">—</div>
+    <div style="font-size:10px;color:#7dd3fc;margin-top:2px;" id="sbUserEmail">—</div>
+    <div style="font-size:10px;margin-top:3px;" id="sbUserRole"></div>
+  </div>
+  © 2026 نظام العربي للعرض<br>جميع الحقوق محفوظة AbdElmonem </div>
+</div>
+<div class="sb-overlay" id="sbOverlay" onclick="closeSb()"></div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="hamburger" onclick="openSb()">☰</button>
+      <div>
+        <h1 id="pageHeading">لوحة التحكم <span class="dot-live"></span></h1>
+        <div class="topbar-sub" id="lastUpdate">جاري التحميل...</div>
+      </div>
+    </div>
+    <div class="topbar-actions" id="topbarActions">
+      <button class="btn btn-excel" id="excelBtn" onclick="exportExcelSmart()">📥 Excel</button>
+      <button class="btn btn-ppt" id="pptBtn" onclick="exportPPTSmart()" style="position:relative;overflow:hidden">
+        <span id="pptBtnLabel">📊 PowerPoint</span>
+        <span class="progress-bar" id="pptProgress"></span>
+      </button>
+      <button class="btn" onclick="lsLogout()" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;" title="تسجيل الخروج">🚪 خروج</button>
+      <button class="btn btn-clear" onclick="clearAll()">🗑️ مسح الكل</button>
+    </div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="loading-state"><div class="lds"></div><p style="color:var(--tm)">جاري الاتصال بـ Firebase...</p></div>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// State
+// ══════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:"AIzaSyAmzZoKM_YGQAlxHdj6N-s4iUegBrJKNAk",
+  authDomain:"display-a3abe.firebaseapp.com",
+  databaseURL:"https://display-a3abe-default-rtdb.firebaseio.com",
+  projectId:"display-a3abe",
+  storageBucket:"display-a3abe.firebasestorage.app",
+  messagingSenderId:"469714964287",
+  appId:"1:469714964287:web:2aa2e7dd49e46599f38d8a"
+};
+
+let db=null, reports=[], unsubscribe=null;
+let charts={bar:null,donut:null,branchBar:null,branchDonut:null,statsLine:null,statsBar:null};
+let currentPage='overview', selectedBranch=null;
+
+// ══════════════════════════════════════════
+// Firebase
+// ══════════════════════════════════════════
+function initFirebase(){
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.firestore();
+    setFbStatus('connecting');
+    startListener();
+  }catch(e){
+    setFbStatus('error');
+    loadFromLocalStorage();
+  }
+}
+function setFbStatus(state){
+  const dot=document.getElementById('fbDot'),txt=document.getElementById('fbStatusTxt');
+  if(state==='ok'){dot.className='fb-dot ok';txt.textContent=' متصل ✓';txt.style.color='#34d399';}
+  else if(state==='error'){dot.className='fb-dot err';txt.textContent='غير متصل — وضع محلي';txt.style.color='#f87171';}
+  else{dot.className='fb-dot';txt.textContent='جاري الاتصال...';txt.style.color='';}
+}
+function startListener(){
+  unsubscribe=db.collection('reports').onSnapshot(
+    snap=>{
+      reports=[];
+      snap.forEach(doc=>reports.push({_docId:doc.id,...doc.data()}));
+      reports.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+      setFbStatus('ok');
+      updateBadges();
+      renderCurrentPage();
+    },
+    err=>{ setFbStatus('error'); loadFromLocalStorage(); }
+  );
+}
+function loadFromLocalStorage(){
+  try{reports=JSON.parse(localStorage.getItem('arabi_reports')||'[]').map(r=>({_docId:null,...r}));}catch(e){reports=[];}
+  updateBadges();
+  renderCurrentPage();
+}
+function updateBadges(){
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+  document.getElementById('navBadgeReports').textContent=reports.length;
+  document.getElementById('navBadgeBranches').textContent=branches.length;
+}
+
+// ══════════════════════════════════════════
+// Navigation
+// ══════════════════════════════════════════
+const pageTitles={overview:'لوحة التحكم',reports:'جميع التقارير',branches:'تحليل الفروع',statistics:'الإحصائيات',comparison:'مقارنة النسب قبل وبعد'};
+
+function switchPage(page, el){
+  currentPage=page;
+  selectedBranch=null;
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const h=document.getElementById('pageHeading');
+  const dot=page==='overview'?'<span class="dot-live"></span>':'';
+  h.innerHTML=pageTitles[page]+' '+dot;
+  updateExportButtons(page);
+  renderCurrentPage();
+  closeSb();
+}
+
+// ── تحديث أزرار التصدير حسب التبويب ──
+const pageExportLabels = {
+  overview:    { excel:'📥 تصدير عام',        ppt:'📊 تقرير عام' },
+  reports:     { excel:'📥 تصدير التقارير',   ppt:'📊 عرض التقارير' },
+  branches:    { excel:'📥 تصدير الفروع',     ppt:'📊 عرض الفروع' },
+  statistics:  { excel:'📥 تصدير الإحصائيات',ppt:'📊 عرض الإحصائيات' },
+  comparison:  { excel:'📥 تصدير المقارنة',   ppt:'📊 عرض المقارنة' },
+};
+function updateExportButtons(page){
+  const labels = pageExportLabels[page] || pageExportLabels.overview;
+  const excelBtn = document.getElementById('excelBtn');
+  const pptLabel = document.getElementById('pptBtnLabel');
+  if(excelBtn) excelBtn.innerHTML = labels.excel;
+  if(pptLabel) pptLabel.textContent = labels.ppt;
+}
+function renderCurrentPage(){
+  document.getElementById('lastUpdate').textContent='آخر تحديث: '+new Date().toLocaleTimeString('ar-EG');
+  if(currentPage==='overview') renderOverview();
+  else if(currentPage==='reports') renderReportsPage();
+  else if(currentPage==='branches') renderBranchesPage();
+  else if(currentPage==='statistics') renderStatisticsPage();
+  else if(currentPage==='comparison') renderComparisonPage();
+}
+
+// ══════════════════════════════════════════
+// Overview Page
+// ══════════════════════════════════════════
+function renderOverview(){
+  const c=document.getElementById('content');
+  if(!reports.length){
+    c.innerHTML=`<div class="empty fi"><div class="ei">📭</div><h3>لا توجد تقارير بعد</h3><p>أرسل تقريراً من صفحة تسجيل نسب العرض ليظهر هنا فوراً</p></div>`;
+    return;
+  }
+  const totalP=reports.reduce((s,r)=>s+(Number(r.total)||0),0);
+  const totalA=reports.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+  const avgPct=totalP>0?((totalA/totalP)*100).toFixed(1):0;
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+  const kpiLabel=avgPct>=50?'🟢 ممتاز':avgPct>=30?'🟡 جيد':'🔴 يحتاج تحسين';
+
+  c.innerHTML=`
+    <div class="kpi-grid fi">
+      <div class="kpi-card blue"><div class="kpi-icon">📋</div>
+        <div class="kpi-label">إجمالي التقارير</div><div class="kpi-value">${reports.length}</div>
+        <div class="kpi-sub">تقرير مُرسَل</div></div>
+      <div class="kpi-card green"><div class="kpi-icon">📦</div>
+        <div class="kpi-label">إجمالي المنتجات</div><div class="kpi-value">${totalP}</div>
+        <div class="kpi-sub">منتج مُسجَّل</div></div>
+      <div class="kpi-card yellow"><div class="kpi-icon">⭐</div>
+        <div class="kpi-label">منتجات العربي</div><div class="kpi-value">${totalA}</div>
+        <div class="kpi-sub">وحدة معروضة</div></div>
+      <div class="kpi-card dyn"><div class="kpi-icon">📊</div>
+        <div class="kpi-label">متوسط نسبة العربي</div><div class="kpi-value">${avgPct}%</div>
+        <div class="kpi-sub">${kpiLabel}</div></div>
+    </div>
+    <div class="charts-row fi">
+      <div class="chart-card">
+        <div class="chart-title">📈 نسب العرض حسب التقارير</div>
+        <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🍩 توزيع المنتجات</div>
+        <div class="chart-wrap"><canvas id="donutChart"></canvas></div>
+      </div>
+    </div>
+    <div class="sec-header fi"><h2>🏢 ملخص الفروع (${branches.length} فرع)</h2>
+      <button class="filter-reset" onclick="switchPage('branches', document.querySelector('[data-page=branches]'))">عرض التحليل الكامل ←</button>
+    </div>
+    <div class="branch-grid fi" id="branchGrid"></div>
+    <div class="sec-header fi"><h2>📦 تحليل الأقسام</h2></div>
+    <div class="tbl-card fi" id="secTable"></div>
+  `;
+
+  renderBranchCards(branches,'branchGrid',false);
+  renderSecTable('secTable');
+  setTimeout(()=>{
+    renderBarChart();
+    renderDonutChart(totalA,totalP-totalA);
+    animateBars();
+  },80);
+}
+
+// ══════════════════════════════════════════
+// Reports Page
+// ══════════════════════════════════════════
+function renderReportsPage(){
+  const c=document.getElementById('content');
+  if(!reports.length){
+    c.innerHTML=`<div class="empty fi"><div class="ei">📭</div><h3>لا توجد تقارير</h3><p>لا توجد بيانات بعد</p></div>`;
+    return;
+  }
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+  c.innerHTML=`
+    <div class="page-title fi"><h2>📋 جميع التقارير</h2><p>${reports.length} تقرير مُسجَّل</p></div>
+    <div class="branch-filter-bar fi">
+      <label>🔍 تصفية حسب الفرع:</label>
+      <select id="repBranchFilter" onchange="filterReportsTable()">
+        <option value="">كل الفروع</option>
+        ${branches.map(b=>`<option value="${b}">${b}</option>`).join('')}
+      </select>
+      <button class="filter-reset" onclick="document.getElementById('repBranchFilter').value='';filterReportsTable()">إعادة تعيين</button>
+      <span id="repFilterCount" style="font-size:12px;color:var(--tm);margin-right:auto"></span>
+    </div>
+    <div class="tbl-card fi">
+      <table class="dt"><thead><tr>
+        <th>#</th><th>الفرع</th><th>المندوب</th>
+        <th>الإجمالي</th><th>العربي</th><th>النسبة</th><th>التاريخ</th><th>حذف</th>
+      </tr></thead><tbody id="repBody"></tbody></table>
+    </div>
+  `;
+  filterReportsTable();
+}
+function filterReportsTable(){
+  const filter=document.getElementById('repBranchFilter')?.value||'';
+  const filtered=filter?reports.filter(r=>r.branch===filter):reports;
+  const tb=document.getElementById('repBody');if(!tb)return;
+  const cnt=document.getElementById('repFilterCount');
+  if(cnt)cnt.textContent=filter?`${filtered.length} تقرير للفرع "${filter}"`:'';
+  tb.innerHTML='';
+  filtered.forEach((r,i)=>{
+    const p=parseFloat(r.pct)||0;
+    const cls=p>=50?'high':p>=30?'mid':'low';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td><td><strong>${r.branch||'-'}</strong></td><td>${r.agent||'-'}</td>
+      <td style="text-align:center">${r.total||0}</td>
+      <td style="text-align:center">${r.arabi||0}</td>
+      <td style="text-align:center"><span class="pbadge ${cls}">${r.pct||0}%</span></td>
+      <td style="font-size:11px;color:var(--tm)">${r.timestamp||''}</td>
+      <td style="text-align:center"><button class="del-btn" onclick="deleteOne('${r._docId}',${r.id||0})">🗑️</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+// ══════════════════════════════════════════
+// Branches Page
+// ══════════════════════════════════════════
+function renderBranchesPage(){
+  const c=document.getElementById('content');
+  if(!reports.length){
+    c.innerHTML=`<div class="empty fi"><div class="ei">🏢</div><h3>لا توجد فروع</h3><p>لا توجد بيانات بعد</p></div>`;
+    return;
+  }
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+  let detailHTML='';
+  if(selectedBranch){
+    detailHTML=buildBranchDetail(selectedBranch);
+  }
+
+  c.innerHTML=`
+    <div class="page-title fi"><h2>🏢 تحليل الفروع</h2><p>${branches.length} فرع — انقر على فرع لعرض التحليل التفصيلي</p></div>
+    <div class="branch-filter-bar fi">
+      <label>🔍 اختر فرعاً للتحليل:</label>
+      <select id="branchSelect" onchange="selectBranchFromDropdown(this.value)">
+        <option value="">— اختر فرعاً —</option>
+        ${branches.map(b=>`<option value="${b}" ${selectedBranch===b?'selected':''}>${b}</option>`).join('')}
+      </select>
+      ${selectedBranch?`<button class="filter-reset" onclick="selectedBranch=null;renderBranchesPage()">✕ إغلاق التفاصيل</button>`:''}
+    </div>
+    <div id="branchDetailContainer">${detailHTML}</div>
+    <div class="sec-header fi"><h2>📊 مقارنة الفروع</h2></div>
+    <div class="branch-grid fi" id="branchGrid"></div>
+    <div class="sec-header fi"><h2>📋 ترتيب الفروع حسب الأداء</h2></div>
+    <div class="tbl-card fi">
+      <table class="dt"><thead><tr>
+        <th>الترتيب</th><th>الفرع</th><th>التقارير</th><th>الإجمالي</th><th>العربي</th><th>النسبة</th><th>التقييم</th><th>تحليل</th>
+      </tr></thead><tbody id="branchTblBody"></tbody></table>
+    </div>
+  `;
+  renderBranchCards(branches,'branchGrid',true);
+  renderBranchTable(branches);
+  setTimeout(animateBars,80);
+  if(selectedBranch) setTimeout(()=>renderBranchDetailCharts(selectedBranch),120);
+}
+function selectBranchFromDropdown(val){
+  selectedBranch=val||null;
+  renderBranchesPage();
+}
+function selectBranchCard(name){
+  selectedBranch=(selectedBranch===name)?null:name;
+  renderBranchesPage();
+  setTimeout(()=>document.getElementById('branchDetailContainer')?.scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+function buildBranchDetail(name){
+  const br=reports.filter(r=>r.branch===name);
+  const tot=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+  const arab=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+  const pct=tot>0?((arab/tot)*100).toFixed(1):0;
+  const col=pct>=50?'var(--g1)':pct>=30?'var(--y1)':'var(--r1)';
+  const agents=[...new Set(br.map(r=>r.agent).filter(Boolean))];
+  return `
+    <div class="branch-detail fi">
+      <div class="branch-detail-header">
+        <div class="branch-detail-title">🏢 ${name}</div>
+        <button class="branch-close-btn" onclick="selectedBranch=null;renderBranchesPage()">✕ إغلاق</button>
+      </div>
+      <div class="branch-kpis">
+        <div class="bkpi"><div class="bkpi-val">${br.length}</div><div class="bkpi-lbl">عدد التقارير</div></div>
+        <div class="bkpi"><div class="bkpi-val">${tot}</div><div class="bkpi-lbl">إجمالي المنتجات</div></div>
+        <div class="bkpi"><div class="bkpi-val">${arab}</div><div class="bkpi-lbl">منتجات العربي</div></div>
+        <div class="bkpi"><div class="bkpi-val" style="color:${col}">${pct}%</div><div class="bkpi-lbl">نسبة العربي</div></div>
+      </div>
+      <div class="branch-charts-row">
+        <div class="chart-card">
+          <div class="chart-title">📈 نسب التقارير - ${name}</div>
+          <div class="chart-wrap"><canvas id="branchBarChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">🍩 توزيع المنتجات</div>
+          <div class="chart-wrap"><canvas id="branchDonutChart"></canvas></div>
+        </div>
+      </div>
+      <div class="sec-header" style="margin-top:18px"><h2>📦 الأقسام</h2></div>
+      <div class="tbl-card" id="branchSecTable_${name.replace(/\s+/g,'_')}" style="margin-bottom:14px">
+        جاري التحميل...
+      </div>
+      <div class="sec-header"><h2>👤 المندوبون (${agents.length})</h2></div>
+      <div class="tbl-card" style="margin-bottom:0">
+        <table class="dt"><thead><tr><th>#</th><th>المندوب</th><th>الإجمالي</th><th>العربي</th><th>النسبة</th><th>التاريخ</th></tr></thead>
+        <tbody>${br.map((r,i)=>{
+          const p=parseFloat(r.pct)||0;const cls=p>=50?'high':p>=30?'mid':'low';
+          return`<tr><td>${i+1}</td><td>${r.agent||'-'}</td><td style="text-align:center">${r.total||0}</td><td style="text-align:center">${r.arabi||0}</td>
+            <td style="text-align:center"><span class="pbadge ${cls}">${r.pct||0}%</span></td>
+            <td style="font-size:11px;color:var(--tm)">${r.timestamp||''}</td></tr>`;
+        }).join('')}</tbody></table>
+      </div>
+    </div>`;
+  // render sections for this branch after HTML is set
+  setTimeout(()=>{
+    const secId='branchSecTable_'+name.replace(/\s+/g,'_');
+    renderSecTable(secId, name);
+  },50);
+}
+function renderBranchDetailCharts(name){
+  const br=reports.filter(r=>r.branch===name);
+  const labels=br.map((_,i)=>`ت${i+1}`);
+  const data=br.map(r=>parseFloat(r.pct)||0);
+  const colors=data.map(v=>v>=50?'rgba(52,211,153,.8)':v>=30?'rgba(251,191,36,.8)':'rgba(248,113,113,.8)');
+  const ctx1=document.getElementById('branchBarChart');
+  const ctx2=document.getElementById('branchDonutChart');
+  if(charts.branchBar){charts.branchBar.destroy();}
+  if(charts.branchDonut){charts.branchDonut.destroy();}
+  if(ctx1){
+    charts.branchBar=new Chart(ctx1,{type:'bar',
+      data:{labels,datasets:[{label:'نسبة العربي %',data,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>br[items[0].dataIndex]?.agent||'',label:c=>`${c.raw}%`}}},
+        scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%',color:'rgba(125,211,252,.8)',font:{size:11}},grid:{color:'rgba(14,165,233,.08)'}},
+                x:{ticks:{color:'rgba(125,211,252,.8)',font:{size:11}},grid:{display:false}}}}});
+  }
+  if(ctx2){
+    const tot=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const arab=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    charts.branchDonut=new Chart(ctx2,{type:'doughnut',
+      data:{labels:['العربي','منافسون'],datasets:[{data:[arab,tot-arab],
+        backgroundColor:['rgba(52,211,153,.85)','rgba(14,165,233,.35)'],
+        borderColor:['rgba(52,211,153,1)','rgba(14,165,233,.6)'],borderWidth:2,hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
+        plugins:{legend:{position:'bottom',labels:{color:'rgba(125,211,252,.9)',font:{size:11},padding:12,usePointStyle:true}},
+          tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} وحدة`}}}}});
+  }
+}
+function renderBranchTable(branches){
+  const tb=document.getElementById('branchTblBody');if(!tb)return;
+  const rows=branches.map(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    const t=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const a=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    const p=t>0?((a/t)*100).toFixed(1):0;
+    return{b,len:br.length,t,a,p:parseFloat(p)};
+  }).sort((x,y)=>y.p-x.p);
+  tb.innerHTML=rows.map((row,i)=>{
+    const cls=row.p>=50?'high':row.p>=30?'mid':'low';
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+    return`<tr>
+      <td style="text-align:center">${medal||i+1}</td>
+      <td><strong>${row.b}</strong></td>
+      <td style="text-align:center">${row.len}</td>
+      <td style="text-align:center">${row.t}</td>
+      <td style="text-align:center">${row.a}</td>
+      <td style="text-align:center"><span class="pbadge ${cls}">${row.p}%</span></td>
+      <td style="text-align:center">${row.p>=50?'ممتاز ⭐':row.p>=30?'جيد':'يحتاج تحسين'}</td>
+      <td style="text-align:center"><button style="background:rgba(14,165,233,.12);border:1px solid rgba(14,165,233,.3);color:var(--ac2);font-family:'Cairo',sans-serif;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer" onclick="selectBranchCard('${row.b}')">تحليل</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// Statistics Page
+// ══════════════════════════════════════════
+function renderStatisticsPage(){
+  const c=document.getElementById('content');
+  if(!reports.length){
+    c.innerHTML=`<div class="empty fi"><div class="ei">📊</div><h3>لا توجد إحصائيات</h3><p>لا توجد بيانات بعد</p></div>`;
+    return;
+  }
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+  const totalP=reports.reduce((s,r)=>s+(Number(r.total)||0),0);
+  const totalA=reports.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+  const avgPct=totalP>0?((totalA/totalP)*100).toFixed(1):0;
+
+  // Branch stats sorted by pct
+  const branchStats=branches.map(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    const t=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const a=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    const p=t>0?((a/t)*100).toFixed(1):0;
+    return{b,len:br.length,t,a,p:parseFloat(p)};
+  }).sort((x,y)=>y.p-x.p);
+
+  // Section stats (all combined for ranking widget)
+  const secRowsAll=calcSections(reports);
+  const maxBranchP=branchStats.length?branchStats[0].p:1;
+  const maxSecP=secRowsAll.length?parseFloat(secRowsAll[0].p):1;
+
+  c.innerHTML=`
+    <div class="page-title fi"><h2>📊 الإحصائيات الشاملة</h2><p>تحليل معمّق لجميع البيانات</p></div>
+    <div class="kpi-grid fi">
+      <div class="kpi-card blue"><div class="kpi-icon">📋</div>
+        <div class="kpi-label">إجمالي التقارير</div><div class="kpi-value">${reports.length}</div></div>
+      <div class="kpi-card green"><div class="kpi-icon">🏢</div>
+        <div class="kpi-label">عدد الفروع</div><div class="kpi-value">${branches.length}</div></div>
+      <div class="kpi-card yellow"><div class="kpi-icon">📦</div>
+        <div class="kpi-label">منتجات العربي</div><div class="kpi-value">${totalA}</div></div>
+      <div class="kpi-card dyn"><div class="kpi-icon">📊</div>
+        <div class="kpi-label">المتوسط العام</div><div class="kpi-value">${avgPct}%</div></div>
+    </div>
+    <div class="charts-row fi">
+      <div class="chart-card">
+        <div class="chart-title">📊 مقارنة نسب الفروع</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="statsBranchChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📈 اتجاه النسب عبر الزمن</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="statsLineChart"></canvas></div>
+      </div>
+    </div>
+    <div class="stats-grid fi">
+      <div class="stat-card">
+        <div class="stat-card-head"><div class="stat-card-title">🏆 أفضل الفروع</div><div class="stat-card-icon">🏢</div></div>
+        <div class="stat-rank">
+          ${branchStats.slice(0,5).map((row,i)=>`
+            <div class="rank-item">
+              <div class="rank-num">${i+1}</div>
+              <div style="flex:1">
+                <div class="rank-name">${row.b}</div>
+                <div class="rank-bar-wrap" style="margin-top:4px">
+                  <div class="rank-bar-fill" style="width:${(row.p/maxBranchP)*100}%"></div>
+                </div>
+              </div>
+              <div class="rank-val" style="color:${row.p>=50?'var(--g1)':row.p>=30?'var(--y1)':'var(--r1)'}">${row.p}%</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-head"><div class="stat-card-title">📦 تحليل الأقسام</div><div class="stat-card-icon">📊</div></div>
+        <div class="stat-rank">
+          ${secRowsAll.length?secRowsAll.slice(0,5).map((s,i)=>`
+            <div class="rank-item">
+              <div class="rank-num">${i+1}</div>
+              <div style="flex:1">
+                <div class="rank-name">${s.l}</div>
+                <div class="rank-bar-wrap" style="margin-top:4px">
+                  <div class="rank-bar-fill" style="width:${(parseFloat(s.p)/maxSecP)*100}%"></div>
+                </div>
+              </div>
+              <div class="rank-val">${s.p}%</div>
+            </div>`).join(''):`<p style="color:var(--tm);font-size:12px;text-align:center;padding:20px 0">لا توجد بيانات أقسام</p>`}
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-head"><div class="stat-card-title">🕐 آخر النشاطات</div><div class="stat-card-icon">📋</div></div>
+        <div>
+          ${reports.slice(0,6).map(r=>{
+            const p=parseFloat(r.pct)||0;
+            const col=p>=50?'var(--g1)':p>=30?'var(--y1)':'var(--r1)';
+            return`<div class="timeline-item">
+              <div class="tl-dot" style="background:${col}"></div>
+              <div class="tl-info">
+                <div class="tl-branch">${r.branch||'-'}</div>
+                <div class="tl-detail">${r.agent||'-'} · ${r.timestamp||''}</div>
+              </div>
+              <div class="tl-pct" style="color:${col}">${r.pct||0}%</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="sec-header fi"><h2>📦 تحليل الأقسام لكل فرع</h2></div>
+    <div class="tbl-card fi" id="statsSecPerBranch"></div>
+    <div class="sec-header fi"><h2>📊 تفاصيل إحصائيات الفروع</h2></div>
+    <div class="tbl-card fi">
+      <table class="dt"><thead><tr>
+        <th>الترتيب</th><th>الفرع</th><th>التقارير</th><th>الإجمالي</th><th>العربي</th><th>النسبة</th><th>الحصة %</th><th>التقييم</th>
+      </tr></thead><tbody>
+        ${branchStats.map((row,i)=>{
+          const cls=row.p>=50?'high':row.p>=30?'mid':'low';
+          const share=totalA>0?((row.a/totalA)*100).toFixed(1):0;
+          return`<tr>
+            <td style="text-align:center;font-weight:700">${i+1}</td>
+            <td><strong>${row.b}</strong></td>
+            <td style="text-align:center">${row.len}</td>
+            <td style="text-align:center">${row.t}</td>
+            <td style="text-align:center">${row.a}</td>
+            <td style="text-align:center"><span class="pbadge ${cls}">${row.p}%</span></td>
+            <td style="text-align:center;color:var(--tm)">${share}%</td>
+            <td style="text-align:center">${row.p>=50?'ممتاز ⭐':row.p>=30?'جيد':'يحتاج تحسين'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody></table>
+    </div>
+  `;
+  setTimeout(()=>{
+    renderStatsBranchChart(branchStats);
+    renderStatsLineChart();
+    renderSecTable('statsSecPerBranch');
+  },80);
+}
+function renderStatsBranchChart(branchStats){
+  const ctx=document.getElementById('statsBranchChart');if(!ctx)return;
+  if(charts.statsBar){charts.statsBar.destroy();}
+  const labels=branchStats.map(b=>b.b);
+  const data=branchStats.map(b=>b.p);
+  const colors=data.map(v=>v>=50?'rgba(52,211,153,.8)':v>=30?'rgba(251,191,36,.8)':'rgba(248,113,113,.8)');
+  charts.statsBar=new Chart(ctx,{type:'bar',
+    data:{labels,datasets:[{label:'النسبة %',data,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false}},
+      scales:{x:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%',color:'rgba(125,211,252,.8)',font:{size:10}},grid:{color:'rgba(14,165,233,.08)'}},
+              y:{ticks:{color:'rgba(125,211,252,.8)',font:{size:10}},grid:{display:false}}}}});
+}
+function renderStatsLineChart(){
+  const ctx=document.getElementById('statsLineChart');if(!ctx)return;
+  if(charts.statsLine){charts.statsLine.destroy();}
+  const sorted=[...reports].sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+  const data=sorted.map(r=>parseFloat(r.pct)||0);
+  const labels=sorted.map((_,i)=>`${i+1}`);
+  charts.statsLine=new Chart(ctx,{type:'line',
+    data:{labels,datasets:[{label:'نسبة العربي %',data,borderColor:'rgba(14,165,233,.9)',backgroundColor:'rgba(14,165,233,.08)',
+      pointBackgroundColor:data.map(v=>v>=50?'rgba(52,211,153,1)':v>=30?'rgba(251,191,36,1)':'rgba(248,113,113,1)'),
+      pointRadius:4,borderWidth:2,tension:.4,fill:true}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%',color:'rgba(125,211,252,.8)',font:{size:10}},grid:{color:'rgba(14,165,233,.06)'}},
+              x:{ticks:{color:'rgba(125,211,252,.8)',font:{size:10}},grid:{display:false}}}}});
+}
+
+// ══════════════════════════════════════════
+// Shared Render Helpers
+// ══════════════════════════════════════════
+function renderBranchCards(branches, containerId, clickable){
+  const g=document.getElementById(containerId);if(!g)return;
+  g.innerHTML='';
+  branches.forEach(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    const tot=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const arab=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    const pct=tot>0?((arab/tot)*100).toFixed(1):0;
+    const col=pct>=50?'#34d399':pct>=30?'#fbbf24':'#f87171';
+    const el=document.createElement('div');
+    el.className='bcard'+(clickable&&selectedBranch===b?' selected':'');
+    if(clickable) el.onclick=()=>selectBranchCard(b);
+    el.innerHTML=`
+      <div class="bcard-name">🏢 ${b}${clickable?'<span style="margin-right:auto;font-size:10px;color:var(--tm);font-weight:400">انقر للتفاصيل</span>':''}</div>
+      <div class="bcard-stats">
+        <div><div class="bs-v">${br.length}</div><div class="bs-l">تقارير</div></div>
+        <div><div class="bs-v">${tot}</div><div class="bs-l">إجمالي</div></div>
+        <div><div class="bs-v" style="color:${col}">${pct}%</div><div class="bs-l">العربي</div></div>
+      </div>
+      <div class="bbar"><div class="bbar-fill" data-w="${Math.min(pct,100)}" style="background:linear-gradient(90deg,${col},${col}88)"></div></div>
+      <div class="bbar-pcts"><span>0%</span><span style="color:${col}">${pct}%</span><span>100%</span></div>`;
+    g.appendChild(el);
+  });
+}
+// ── Helper: حساب أقسام مجموعة تقارير ──
+function calcSections(reps){
+  const smap={};
+  reps.forEach(r=>(r.sections||[]).forEach(s=>{
+    if(!smap[s.label])smap[s.label]={l:s.label,count:0,arabi:0};
+    smap[s.label].count+=Number(s.count)||0;
+    smap[s.label].arabi+=Number(s.arabi)||0;
+  }));
+  return Object.values(smap).sort((a,b)=>b.arabi-a.arabi).map(s=>({
+    ...s, p: s.count>0?((s.arabi/s.count)*100).toFixed(1):'0'
+  }));
+}
+
+function buildSecTableHTML(rows){
+  if(!rows.length) return '<p style="color:var(--tm);text-align:center;padding:14px">لا توجد بيانات أقسام</p>';
+  return `<table class="dt"><thead><tr>
+    <th>القسم</th><th>الإجمالي</th><th>العربي</th><th>النسبة</th><th>التقييم</th>
+  </tr></thead><tbody>${rows.map(s=>{
+    const cls=parseFloat(s.p)>=50?'high':parseFloat(s.p)>=30?'mid':'low';
+    const stars=parseFloat(s.p)>=70?'⭐⭐⭐':parseFloat(s.p)>=50?'⭐⭐':parseFloat(s.p)>=30?'⭐':'—';
+    return`<tr><td><strong>${s.l}</strong></td>
+      <td style="text-align:center">${s.count}</td>
+      <td style="text-align:center">${s.arabi}</td>
+      <td style="text-align:center"><span class="pbadge ${cls}">${s.p}%</span></td>
+      <td style="text-align:center">${stars}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function renderSecTable(containerId, branchFilter){
+  const c=document.getElementById(containerId);if(!c)return;
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+
+  // إذا تم تحديد فرع بعينه
+  if(branchFilter){
+    const rows=calcSections(reports.filter(r=>r.branch===branchFilter));
+    c.innerHTML=rows.length
+      ? buildSecTableHTML(rows)
+      : `<p style="color:var(--tm);text-align:center;padding:14px">لا توجد بيانات أقسام للفرع "${branchFilter}"</p>`;
+    return;
+  }
+
+  // عرض أقسام كل فرع على حدة
+  let hasAny=false, html='';
+  branches.forEach(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    const rows=calcSections(br);
+    if(!rows.length)return;
+    hasAny=true;
+    const tot=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const arab=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    const pct=tot>0?((arab/tot)*100).toFixed(1):0;
+    const col=parseFloat(pct)>=50?'var(--g1)':parseFloat(pct)>=30?'var(--y1)':'var(--r1)';
+    html+=`
+      <div style="margin-bottom:22px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 14px;
+          background:rgba(14,165,233,.06);border-radius:10px;border-right:3px solid var(--p)">
+          <span style="font-size:14px;font-weight:700;color:var(--ac2)">🏢 ${b}</span>
+          <span style="margin-right:auto;font-size:12px;color:${col};font-weight:700">نسبة الفرع: ${pct}%</span>
+          <span style="font-size:11px;color:var(--tm)">${rows.length} قسم</span>
+        </div>
+        ${buildSecTableHTML(rows)}
+      </div>`;
+  });
+  c.innerHTML=hasAny?html:'<p style="color:var(--tm);text-align:center;padding:20px">لا توجد بيانات أقسام</p>';
+}
+function renderBarChart(){
+  const ctx=document.getElementById('barChart');if(!ctx)return;
+  if(charts.bar){charts.bar.destroy();}
+  const labels=reports.map((_,i)=>`ت${i+1}`);
+  const data=reports.map(r=>parseFloat(r.pct)||0);
+  const colors=data.map(v=>v>=50?'rgba(52,211,153,.8)':v>=30?'rgba(251,191,36,.8)':'rgba(248,113,113,.8)');
+  charts.bar=new Chart(ctx,{type:'bar',
+    data:{labels,datasets:[{label:'نسبة العربي %',data,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>reports[items[0].dataIndex]?.branch||'',label:c=>`${c.raw}%`}}},
+      scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%',color:'rgba(125,211,252,.8)',font:{size:11}},grid:{color:'rgba(14,165,233,.08)'}},
+              x:{ticks:{color:'rgba(125,211,252,.8)',font:{size:11}},grid:{display:false}}}}});
+}
+function renderDonutChart(arabi,other){
+  const ctx=document.getElementById('donutChart');if(!ctx)return;
+  if(charts.donut){charts.donut.destroy();}
+  charts.donut=new Chart(ctx,{type:'doughnut',
+    data:{labels:['العربي','منافسون'],datasets:[{data:[arabi,other],
+      backgroundColor:['rgba(52,211,153,.85)','rgba(14,165,233,.35)'],
+      borderColor:['rgba(52,211,153,1)','rgba(14,165,233,.6)'],borderWidth:2,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
+      plugins:{legend:{position:'bottom',labels:{color:'rgba(125,211,252,.9)',font:{size:11},padding:12,usePointStyle:true}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} وحدة`}}}}});
+}
+function animateBars(){
+  document.querySelectorAll('.bbar-fill').forEach(el=>{
+    setTimeout(()=>{el.style.width=el.dataset.w+'%';},150);
+  });
+}
+
+// ══════════════════════════════════════════
+// Delete / Clear
+// ══════════════════════════════════════════
+async function deleteOne(docId,localId){
+  if(!confirm('حذف هذا التقرير؟'))return;
+  try{
+    if(docId&&db){await db.collection('reports').doc(docId).delete();}
+    else{
+      let arr=JSON.parse(localStorage.getItem('arabi_reports')||'[]');
+      arr=arr.filter(r=>r.id!==localId);
+      localStorage.setItem('arabi_reports',JSON.stringify(arr));
+      reports=arr.map(r=>({_docId:null,...r}));
+      renderCurrentPage();
+    }
+    showToast('تم حذف التقرير');
+  }catch(e){showToast('خطأ في الحذف','err');}
+}
+async function clearAll(){
+  if(!confirm('مسح جميع التقارير نهائياً؟'))return;
+  try{
+    if(db){const snap=await db.collection('reports').get();const batch=db.batch();snap.forEach(d=>batch.delete(d.ref));await batch.commit();}
+    else{localStorage.removeItem('arabi_reports');reports=[];renderCurrentPage();}
+    showToast('تم مسح جميع التقارير');
+  }catch(e){showToast('خطأ في المسح','err');}
+}
+
+// ══════════════════════════════════════════
+// Toast
+// ══════════════════════════════════════════
+let _tt=null;
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  if(_tt){clearTimeout(_tt);t.classList.remove('show');void t.offsetWidth;}
+  t.textContent=(type==='success'?'✅ ':'❌ ')+msg;
+  t.className='toast'+(type==='err'?' err':'');
+  void t.offsetWidth;t.classList.add('show');
+  _tt=setTimeout(()=>{t.classList.remove('show');_tt=null;},3500);
+}
+
+// ══════════════════════════════════════════
+// Smart Export Dispatchers
+// ══════════════════════════════════════════
+function exportExcelSmart(){
+  if(currentPage==='reports')    exportExcelReports();
+  else if(currentPage==='branches')   exportExcelBranches();
+  else if(currentPage==='statistics') exportExcelStatistics();
+  else if(currentPage==='comparison') exportExcelComparison();
+  else exportExcel(); // overview = full
+}
+async function exportPPTSmart(){
+  if(currentPage==='reports')    await exportPPTReports();
+  else if(currentPage==='branches')   await exportPPTBranches();
+  else if(currentPage==='statistics') await exportPPTStatistics();
+  else if(currentPage==='comparison') await exportPPTComparison();
+  else await exportPPT(); // overview = full
+}
+
+// ══════════════════════════════════════════
+// Excel Export — Full (Overview)
+// ══════════════════════════════════════════
+function exportExcel(){
+  if(!reports.length){showToast('لا توجد بيانات','err');return;}
+  const wb=XLSX.utils.book_new();
+  const totalP=reports.reduce((s,r)=>s+(Number(r.total)||0),0);
+  const totalA=reports.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+  const avg=totalP>0?((totalA/totalP)*100).toFixed(1):0;
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+    ['نظام نسب عرض العربي','','','',''],
+    ['تاريخ التصدير',new Date().toLocaleString('ar-EG'),'','',''],['','','','',''],
+    ['إجمالي التقارير','إجمالي المنتجات','منتجات العربي','نسبة العربي','عدد الفروع'],
+    [reports.length,totalP,totalA,avg+'%',branches.length]
+  ]),'ملخص');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+    ['#','الفرع','المندوب','الإجمالي','العربي','النسبة %','التاريخ'],
+    ...reports.map((r,i)=>[i+1,r.branch,r.agent,r.total,r.arabi,parseFloat(r.pct),r.timestamp])
+  ]),'التقارير');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+    ['الفرع','التقارير','الإجمالي','العربي','النسبة','التقييم'],
+    ...branches.map(b=>{
+      const br=reports.filter(r=>r.branch===b);
+      const t=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+      const a=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+      const p=t>0?((a/t)*100).toFixed(1):0;
+      return[b,br.length,t,a,parseFloat(p),p>=50?'ممتاز':p>=30?'جيد':'يحتاج تحسين'];
+    })
+  ]),'تحليل الفروع');
+  // ورقة تحليل الأقسام لكل فرع على حدة
+  branches.forEach(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    const rows=calcSections(br);
+    if(!rows.length)return;
+    const sheetName=('أقسام-'+b).slice(0,31); // Excel max 31 chars
+    const tot=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const arab=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    const bpct=tot>0?((arab/tot)*100).toFixed(1):0;
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+      ['تحليل أقسام فرع: '+b,'','','',''],
+      ['إجمالي الفرع',tot,'منتجات العربي',arab,'النسبة: '+bpct+'%'],
+      ['','','','',''],
+      ['القسم','الإجمالي','العربي','النسبة %','التقييم'],
+      ...rows.map(s=>[s.l,s.count,s.arabi,parseFloat(s.p),parseFloat(s.p)>=50?'ممتاز':parseFloat(s.p)>=30?'جيد':'يحتاج تحسين'])
+    ]),sheetName);
+  });
+  // ورقة إجمالية للأقسام (جميع الفروع مجمّعة)
+  const allSec=calcSections(reports);
+  if(allSec.length){
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+      ['تحليل الأقسام الإجمالي — جميع الفروع','','','',''],
+      ['','','','',''],
+      ['القسم','الإجمالي','العربي','النسبة %','التقييم'],
+      ...allSec.map(s=>[s.l,s.count,s.arabi,parseFloat(s.p),parseFloat(s.p)>=50?'ممتاز':parseFloat(s.p)>=30?'جيد':'يحتاج تحسين'])
+    ]),'تحليل الأقسام-إجمالي');
+  }
+  XLSX.writeFile(wb,`تقرير_نسب_العرض_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.xlsx`);
+  showToast('تم تحميل Excel بنجاح ✓');
+}
+
+// ══════════════════════════════════════════
+// PowerPoint Export — Full Report
+// ══════════════════════════════════════════
+async function exportPPT(){
+  if(!reports.length){showToast('لا توجد بيانات','err');return;}
+  const btn=document.getElementById('pptBtn');
+  const prog=document.getElementById('pptProgress');
+  btn.classList.add('loading');
+  btn.innerHTML='⏳ جاري الإنشاء...<span class="progress-bar" id="pptProgress" style="display:block"></span>';
+  showToast('جاري إنشاء PowerPoint الشامل...');
+
+  // Detect the correct global name
+  const PptxCtor = window.PptxGenJS || window.pptxgen || window.PptxGen;
+  if(!PptxCtor){
+    showToast('مكتبة PowerPoint لم تُحمَّل بعد، انتظر لحظة وحاول مجدداً','err');
+    btn.classList.remove('loading');
+    btn.innerHTML='📊 PowerPoint<span class="progress-bar" id="pptProgress"></span>';
+    return;
+  }
+  try{
+    const pptx=new PptxCtor();
+    pptx.layout='LAYOUT_16x9';
+    pptx.title='تقرير نسب عرض العربي';
+
+    const BG='060e1e', BLUE='0ea5e9', CYAN='67e8f9', WH='e0f2fe', MT='7dd3fc',
+          GREEN='34d399', YELLOW='fbbf24', RED='f87171', DARK='0f2040';
+
+    const totalP=reports.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const totalA=reports.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    const avgPct=totalP>0?((totalA/totalP)*100).toFixed(1):0;
+    const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+
+    const branchStats=branches.map(b=>{
+      const br=reports.filter(r=>r.branch===b);
+      const t=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+      const a=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+      const p=t>0?((a/t)*100).toFixed(1):0;
+      return{b,len:br.length,t,a,p:parseFloat(p)};
+    }).sort((x,y)=>y.p-x.p);
+
+    // ─ Helpers ─
+    const addHeader=(slide,title)=>{
+      slide.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:.55,fill:{color:DARK}});
+      slide.addShape(pptx.ShapeType.rect,{x:0,y:.55,w:'100%',h:.03,fill:{color:BLUE}});
+      slide.addText(title,{x:.35,y:.05,w:9.3,h:.45,fontSize:18,bold:true,color:CYAN,rtlMode:true});
+      slide.addShape(pptx.ShapeType.rect,{x:0,y:6.9,w:'100%',h:.03,fill:{color:BLUE}});
+      slide.addText('نظام نسب عرض العربي',{x:.3,y:5.7,w:5,h:.25,fontSize:9,color:MT,rtlMode:true});
+      slide.addText(new Date().toLocaleDateString('ar-EG'),{x:7,y:5.7,w:3,h:.25,fontSize:9,color:MT,align:'left'});
+    };
+
+    // ── Slide 1: Cover ──
+    const s1=pptx.addSlide();s1.background={color:BG};
+    s1.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:2.2,fill:{color:DARK}});
+    s1.addShape(pptx.ShapeType.rect,{x:0,y:2.2,w:'100%',h:.04,fill:{color:BLUE}});
+    s1.addText('📊',{x:4.3,y:.25,w:1.4,h:.9,fontSize:44,align:'center'});
+    s1.addText('تقرير نسب عرض العربي',{x:.8,y:1.05,w:8.4,h:.75,fontSize:30,bold:true,color:CYAN,align:'center',rtlMode:true});
+    s1.addText('التقرير الشامل لجميع الفروع والإحصائيات',{x:.8,y:2.45,w:8.4,h:.5,fontSize:15,color:MT,align:'center',rtlMode:true});
+    s1.addShape(pptx.ShapeType.rect,{x:1.5,y:3.15,w:7,h:1.05,fill:{color:DARK},line:{color:BLUE,pt:1}});
+    [
+      ['إجمالي التقارير',reports.length,1.8],
+      ['إجمالي المنتجات',totalP,4.3],
+      ['نسبة العربي',avgPct+'%',6.8],
+    ].forEach(([l,v,x])=>{
+      s1.addText(String(v),{x,y:3.2,w:2,h:.5,fontSize:20,bold:true,color:CYAN,align:'center'});
+      s1.addText(l,{x,y:3.7,w:2,h:.35,fontSize:10,color:MT,align:'center',rtlMode:true});
+    });
+    s1.addText(`التاريخ: ${new Date().toLocaleDateString('ar-EG')}  |  عدد الفروع: ${branches.length}`,
+      {x:.8,y:4.4,w:8.4,h:.35,fontSize:11,color:MT,align:'center',rtlMode:true});
+
+    // ── Slide 2: KPIs ──
+    const s2=pptx.addSlide();s2.background={color:BG};
+    addHeader(s2,'المؤشرات الرئيسية');
+    const kpis=[
+      ['إجمالي التقارير',String(reports.length),BLUE,'📋'],
+      ['إجمالي المنتجات',String(totalP),GREEN,'📦'],
+      ['منتجات العربي',String(totalA),YELLOW,'⭐'],
+      ['متوسط النسبة',avgPct+'%',avgPct>=50?GREEN:avgPct>=30?YELLOW:RED,'📊']
+    ];
+    kpis.forEach(([l,v,col,icon],i)=>{
+      const x=0.3+(i*2.35);
+      s2.addShape(pptx.ShapeType.rect,{x,y:.72,w:2.15,h:2.3,fill:{color:DARK},line:{color:BLUE,pt:.5},shadow:{type:'outer',blur:8,offset:2,angle:135,color:'000000',opacity:.2}});
+      s2.addShape(pptx.ShapeType.rect,{x,y:.72,w:2.15,h:.06,fill:{color:col}});
+      s2.addText(icon,{x,y:.85,w:2.15,h:.55,fontSize:26,align:'center'});
+      s2.addText(v,{x,y:1.45,w:2.15,h:.65,fontSize:26,bold:true,color:col,align:'center'});
+      s2.addText(l,{x,y:2.15,w:2.15,h:.5,fontSize:10,color:MT,align:'center',rtlMode:true});
+    });
+    // Progress indicator
+    const fillPct=Math.min(parseFloat(avgPct),100)/100;
+    s2.addShape(pptx.ShapeType.rect,{x:.3,y:3.35,w:9.4,h:.18,fill:{color:'0a1628'},line:{color:BLUE,pt:.5}});
+    s2.addShape(pptx.ShapeType.rect,{x:.3,y:3.35,w:9.4*fillPct,h:.18,fill:{color:avgPct>=50?GREEN:avgPct>=30?YELLOW:RED}});
+    s2.addText(`شريط التقدم: ${avgPct}%`,{x:.3,y:3.6,w:9.4,h:.3,fontSize:10,color:MT,rtlMode:true});
+
+    // ── Slide 3: Branch Analysis Table ──
+    const s3=pptx.addSlide();s3.background={color:BG};
+    addHeader(s3,'تحليل الفروع — ترتيب حسب الأداء');
+    const hdr=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:11}});
+    const tbl=[[hdr('الترتيب'),hdr('الفرع'),hdr('التقارير'),hdr('الإجمالي'),hdr('العربي'),hdr('النسبة %'),hdr('التقييم')]];
+    branchStats.forEach((row,i)=>{
+      const pCol=row.p>=50?GREEN:row.p>=30?YELLOW:RED;
+      const medal=i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':'';
+      tbl.push([
+        {text:String(i+1),options:{color:MT,align:'center',fontSize:11}},
+        {text:medal+row.b,options:{color:WH,rtlMode:true,bold:true,fontSize:11}},
+        {text:String(row.len),options:{color:MT,align:'center',fontSize:11}},
+        {text:String(row.t),options:{color:MT,align:'center',fontSize:11}},
+        {text:String(row.a),options:{color:MT,align:'center',fontSize:11}},
+        {text:row.p+'%',options:{color:pCol,bold:true,align:'center',fontSize:12}},
+        {text:row.p>=50?'ممتاز':row.p>=30?'جيد':'تحسين',options:{color:pCol,align:'center',rtlMode:true,fontSize:10}},
+      ]);
+    });
+    s3.addTable(tbl,{x:.3,y:.7,w:9.4,rowH:.36,fontSize:11,border:{type:'solid',color:'0ea5e9',pt:.4},
+      fill:{color:BG},color:WH});
+
+    // ── Per-Branch Slides ──
+    for(const row of branchStats){
+      const br=reports.filter(r=>r.branch===row.b);
+      const pCol=row.p>=50?GREEN:row.p>=30?YELLOW:RED;
+      const sb=pptx.addSlide();sb.background={color:BG};
+      addHeader(sb,`تحليل فرع: ${row.b}`);
+      // mini kpis
+      [
+        ['التقارير',String(row.len),BLUE],
+        ['الإجمالي',String(row.t),MT],
+        ['العربي',String(row.a),GREEN],
+        ['النسبة',row.p+'%',pCol]
+      ].forEach(([l,v,col],i)=>{
+        const x=0.3+(i*2.35);
+        sb.addShape(pptx.ShapeType.rect,{x,y:.72,w:2.15,h:1.2,fill:{color:DARK},line:{color:col,pt:.5}});
+        sb.addText(v,{x,y:.85,w:2.15,h:.5,fontSize:22,bold:true,color:col,align:'center'});
+        sb.addText(l,{x,y:1.4,w:2.15,h:.35,fontSize:10,color:MT,align:'center',rtlMode:true});
+      });
+      // Progress bar
+      const f=Math.min(row.p,100)/100;
+      sb.addShape(pptx.ShapeType.rect,{x:.3,y:2.1,w:9.4,h:.22,fill:{color:'0a1628'},line:{color:BLUE,pt:.5}});
+      sb.addShape(pptx.ShapeType.rect,{x:.3,y:2.1,w:9.4*f,h:.22,fill:{color:pCol}});
+      sb.addText(`نسبة العربي: ${row.p}%`,{x:.3,y:2.38,w:9.4,h:.28,fontSize:10,color:pCol,rtlMode:true});
+      // Reports table
+      const bHdr=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:10}});
+      const bTbl=[[bHdr('#'),bHdr('المندوب'),bHdr('الإجمالي'),bHdr('العربي'),bHdr('النسبة'),bHdr('التاريخ')]];
+      br.slice(0,8).forEach((r,i)=>{
+        const rp=parseFloat(r.pct)||0;const rc=rp>=50?GREEN:rp>=30?YELLOW:RED;
+        bTbl.push([
+          {text:String(i+1),options:{color:MT,align:'center',fontSize:10}},
+          {text:r.agent||'-',options:{color:WH,rtlMode:true,fontSize:10}},
+          {text:String(r.total||0),options:{color:MT,align:'center',fontSize:10}},
+          {text:String(r.arabi||0),options:{color:MT,align:'center',fontSize:10}},
+          {text:(r.pct||0)+'%',options:{color:rc,bold:true,align:'center',fontSize:10}},
+          {text:(r.timestamp||'').slice(0,10),options:{color:MT,align:'center',fontSize:9}},
+        ]);
+      });
+      sb.addTable(bTbl,{x:.3,y:2.75,w:9.4,rowH:.32,fontSize:10,border:{type:'solid',color:'0ea5e9',pt:.3}});
+    }
+
+    // ── Slides: Sections per Branch ──
+    for(const brow of branchStats){
+      const brSec=calcSections(reports.filter(r=>r.branch===brow.b));
+      if(!brSec.length)continue;
+      const ss=pptx.addSlide();ss.background={color:BG};
+      addHeader(ss,`أقسام فرع: ${brow.b}`);
+      // Branch summary bar
+      const bf=Math.min(brow.p,100)/100;
+      const bpCol=brow.p>=50?GREEN:brow.p>=30?YELLOW:RED;
+      ss.addShape(pptx.ShapeType.rect,{x:.3,y:.72,w:9.4,h:.22,fill:{color:'0a1628'},line:{color:BLUE,pt:.4}});
+      ss.addShape(pptx.ShapeType.rect,{x:.3,y:.72,w:9.4*bf,h:.22,fill:{color:bpCol}});
+      ss.addText(`نسبة الفرع الإجمالية: ${brow.p}%  |  التقارير: ${brow.len}  |  الإجمالي: ${brow.t}  |  العربي: ${brow.a}`,
+        {x:.3,y:1.0,w:9.4,h:.28,fontSize:10,color:MT,rtlMode:true});
+      const shdr=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:11}});
+      const stbl=[[shdr('القسم'),shdr('الإجمالي'),shdr('العربي'),shdr('النسبة %'),shdr('التقييم')]];
+      brSec.forEach(s=>{
+        const sc=parseFloat(s.p)>=50?GREEN:parseFloat(s.p)>=30?YELLOW:RED;
+        stbl.push([
+          {text:s.l,options:{color:WH,rtlMode:true,fontSize:11}},
+          {text:String(s.count),options:{color:MT,align:'center',fontSize:11}},
+          {text:String(s.arabi),options:{color:MT,align:'center',fontSize:11}},
+          {text:s.p+'%',options:{color:sc,bold:true,align:'center',fontSize:12}},
+          {text:parseFloat(s.p)>=50?'ممتاز':parseFloat(s.p)>=30?'جيد':'تحسين',options:{color:sc,align:'center',rtlMode:true,fontSize:10}},
+        ]);
+      });
+      ss.addTable(stbl,{x:.3,y:1.35,w:9.4,rowH:.36,fontSize:11,border:{type:'solid',color:'0ea5e9',pt:.4}});
+    }
+    // ── Slide: إجمالي الأقسام كل الفروع ──
+    const allSecPPT=calcSections(reports);
+    if(allSecPPT.length){
+      const sa=pptx.addSlide();sa.background={color:BG};
+      addHeader(sa,'إجمالي الأقسام — جميع الفروع');
+      const ahdr=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:11}});
+      const atbl=[[ahdr('القسم'),ahdr('الإجمالي'),ahdr('العربي'),ahdr('النسبة %'),ahdr('التقييم')]];
+      allSecPPT.forEach(s=>{
+        const sc=parseFloat(s.p)>=50?GREEN:parseFloat(s.p)>=30?YELLOW:RED;
+        atbl.push([
+          {text:s.l,options:{color:WH,rtlMode:true,fontSize:11}},
+          {text:String(s.count),options:{color:MT,align:'center',fontSize:11}},
+          {text:String(s.arabi),options:{color:MT,align:'center',fontSize:11}},
+          {text:s.p+'%',options:{color:sc,bold:true,align:'center',fontSize:12}},
+          {text:parseFloat(s.p)>=50?'ممتاز':parseFloat(s.p)>=30?'جيد':'تحسين',options:{color:sc,align:'center',rtlMode:true,fontSize:10}},
+        ]);
+      });
+      sa.addTable(atbl,{x:.3,y:.72,w:9.4,rowH:.36,fontSize:11,border:{type:'solid',color:'0ea5e9',pt:.4}});
+    }
+
+    // ── Last Slide: Thank You ──
+    const sf=pptx.addSlide();sf.background={color:BG};
+    sf.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:2,fill:{color:DARK}});
+    sf.addShape(pptx.ShapeType.rect,{x:0,y:2,w:'100%',h:.04,fill:{color:BLUE}});
+    sf.addText('✅',{x:4.3,y:.25,w:1.4,h:.9,fontSize:40,align:'center'});
+    sf.addText('شكراً لاهتمامكم',{x:.8,y:.95,w:8.4,h:.75,fontSize:28,bold:true,color:CYAN,align:'center',rtlMode:true});
+    sf.addText('نظام نسب عرض العربي — تقرير تلقائي شامل',{x:.8,y:2.3,w:8.4,h:.45,fontSize:14,color:MT,align:'center',rtlMode:true});
+    sf.addText(`الفروع: ${branches.length}  |  التقارير: ${reports.length}  |  المتوسط: ${avgPct}%`,
+      {x:.8,y:3,w:8.4,h:.35,fontSize:12,color:MT,align:'center',rtlMode:true});
+    sf.addShape(pptx.ShapeType.rect,{x:3,y:3.6,w:4,h:.5,fill:{color:DARK},line:{color:BLUE,pt:1}});
+    sf.addText(new Date().toLocaleDateString('ar-EG'),{x:3,y:3.65,w:4,h:.4,fontSize:13,color:CYAN,bold:true,align:'center'});
+
+    const fname=`تقرير_نسب_العرض_الشامل_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.pptx`;
+    await pptx.writeFile({fileName:fname});
+    showToast('✅ تم تحميل PowerPoint بنجاح ('+pptx.slides?.length+' شرائح)');
+  }catch(err){
+    console.error('PPT Error:',err);
+    showToast('خطأ في إنشاء PowerPoint: '+err.message,'err');
+  }finally{
+    btn.classList.remove('loading');
+    btn.innerHTML='📊 PowerPoint<span class="progress-bar" id="pptProgress"></span>';
+  }
+}
+
+// ══════════════════════════════════════════
+// Comparison Page — قبل وبعد
+// ══════════════════════════════════════════
+let cmpCharts={line:null,radar:null};
+
+function renderComparisonPage(){
+  const c=document.getElementById('content');
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+
+  if(!reports.length){
+    c.innerHTML=`<div class="no-data-cmp fi"><div class="ei">🔄</div><h3>لا توجد تقارير</h3><p>أرسل تقارير لأكثر من مرة لنفس الفرع لتفعيل المقارنة</p></div>`;
+    return;
+  }
+
+  const cmpBranches=branches.filter(b=>reports.filter(r=>r.branch===b).length>=2);
+
+  c.innerHTML=`
+    <div class="page-title fi"><h2>🔄 مقارنة النسب قبل وبعد</h2>
+      <p>اختر <strong style="color:var(--ac2)">كل الفروع</strong> لعرض تحليل شامل، أو اختر فرعاً محدداً للمقارنة التفصيلية</p></div>
+
+    <div class="cmp-filter fi">
+      <label>🏢 الفرع:</label>
+      <select id="cmpBranchSel" onchange="onCmpBranchChange()">
+        <option value="__ALL__">🌐 كل الفروع — عرض شامل</option>
+        <option value="" disabled style="color:rgba(125,211,252,.4)">── فروع محددة ──</option>
+        ${branches.map(b=>{
+          const cnt=reports.filter(r=>r.branch===b).length;
+          return`<option value="${b}" ${cnt<2?'style="color:#f87171"':''} >${b} (${cnt} تقارير)</option>`;
+        }).join('')}
+      </select>
+      <label id="cmpBeforeLabel">📅 قبل (التقرير الأول):</label>
+      <select id="cmpBeforeSel" style="display:none"><option value="">— —</option></select>
+      <label id="cmpAfterLabel" style="display:none">📅 بعد (التقرير الثاني):</label>
+      <select id="cmpAfterSel" style="display:none"><option value="">— —</option></select>
+      <button class="cmp-run-btn" id="cmpRunBtn" onclick="runComparison()">⚡ عرض المقارنة</button>
+    </div>
+
+    ${cmpBranches.length===0?`
+      <div class="no-data-cmp fi">
+        <div class="ei">📊</div>
+        <h3>لا توجد فروع بتقارير متعددة بعد</h3>
+        <p>أدخل تقريراً ثانياً لأي فرع لتفعيل المقارنة</p>
+      </div>` : `
+      <div id="cmpResult"></div>
+      <div class="sec-header fi" style="margin-top:4px"><h2 id="cmpAllTitle">📋 ملخص جميع الفروع — ${cmpBranches.length} فرع قابل للمقارنة</h2></div>
+      <div id="cmpAllBranches"></div>`}
+  `;
+
+  if(cmpBranches.length>0){
+    renderAllBranchTimelines(cmpBranches);
+    // Auto-select "كل الفروع"
+    const sel=document.getElementById('cmpBranchSel');
+    if(sel){ sel.value='__ALL__'; onCmpBranchChange(); }
+  }
+}
+
+function onCmpBranchChange(){
+  const b=document.getElementById('cmpBranchSel')?.value;
+  const bSel=document.getElementById('cmpBeforeSel');
+  const aSel=document.getElementById('cmpAfterSel');
+  const bLbl=document.getElementById('cmpBeforeLabel');
+  const aLbl=document.getElementById('cmpAfterLabel');
+  const runBtn=document.getElementById('cmpRunBtn');
+  const res=document.getElementById('cmpResult');
+  if(!bSel||!aSel)return;
+
+  if(b==='__ALL__'){
+    // Hide before/after selectors — show all-branches view
+    bSel.style.display='none'; aSel.style.display='none';
+    if(bLbl)bLbl.style.display='none';
+    if(aLbl)aLbl.style.display='none';
+    if(runBtn)runBtn.textContent='🌐 عرض تقرير كل الفروع';
+    if(res)res.innerHTML='';
+    // Immediately render all-branches full analysis
+    renderAllBranchesFullReport();
+    return;
+  }
+
+  // Single branch mode
+  bSel.style.display=''; aSel.style.display='';
+  if(bLbl)bLbl.style.display='';
+  if(aLbl)aLbl.style.display='';
+  if(runBtn)runBtn.textContent='⚡ عرض المقارنة';
+
+  bSel.innerHTML='<option value="">— اختر —</option>';
+  aSel.innerHTML='<option value="">— اختر —</option>';
+  if(!b)return;
+  const br=reports.filter(r=>r.branch===b).map((r,i)=>({...r,_idx:i}));
+  br.sort((a,b2)=>(a.createdAt?.seconds||0)-(b2.createdAt?.seconds||0));
+  br.forEach((r,i)=>{
+    const label=`${i+1}. ${r.agent||'-'} — ${r.pct||0}% — ${r.timestamp||''}`;
+    bSel.innerHTML+=`<option value="${r._docId||r.id||i}">${label}</option>`;
+    aSel.innerHTML+=`<option value="${r._docId||r.id||i}">${label}</option>`;
+  });
+  if(br.length>=2){ bSel.selectedIndex=1; aSel.selectedIndex=br.length; }
+  if(res)res.innerHTML='';
+}
+
+function getReportByKey(branch, key){
+  const br=reports.filter(r=>r.branch===branch);
+  br.sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+  return br.find(r=>(r._docId||r.id||br.indexOf(r))===key
+    || String(r._docId)===String(key)
+    || String(r.id)===String(key)
+  ) || br[0];
+}
+
+function runComparison(){
+  const branch=document.getElementById('cmpBranchSel')?.value;
+  if(branch==='__ALL__'){ renderAllBranchesFullReport(); return; }
+  const beforeKey=document.getElementById('cmpBeforeSel')?.value;
+  const afterKey=document.getElementById('cmpAfterSel')?.value;
+  if(!branch||!beforeKey||!afterKey){showToast('اختر الفرع والتقريرين','err');return;}
+  if(beforeKey===afterKey){showToast('اختر تقريرين مختلفين','err');return;}
+
+  const br=reports.filter(r=>r.branch===branch);
+  br.sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+  const rB=br.find(r=>String(r._docId||r.id)===String(beforeKey)||br.indexOf(r)===parseInt(beforeKey));
+  const rA=br.find(r=>String(r._docId||r.id)===String(afterKey)||br.indexOf(r)===parseInt(afterKey));
+  if(!rB||!rA){showToast('لم يُعثر على التقرير','err');return;}
+
+  const pB=parseFloat(rB.pct)||0, pA=parseFloat(rA.pct)||0;
+  const delta=+(pA-pB).toFixed(1);
+  const up=delta>0, same=delta===0;
+  const deltaCol=up?'#34d399':same?'#7dd3fc':'#f87171';
+  const deltaIcon=up?'📈':same?'➡️':'📉';
+  const deltaSign=up?'+':'';
+
+  // Sections comparison
+  const secsB=rB.sections||[], secsA=rA.sections||[];
+  const allSecLabels=[...new Set([...secsB.map(s=>s.label),...secsA.map(s=>s.label)])];
+
+  const secCmpRows=allSecLabels.map(lbl=>{
+    const sb=secsB.find(s=>s.label===lbl)||{count:0,arabi:0};
+    const sa=secsA.find(s=>s.label===lbl)||{count:0,arabi:0};
+    const pb=sb.count>0?((sb.arabi/sb.count)*100).toFixed(1):'0';
+    const pa=sa.count>0?((sa.arabi/sa.count)*100).toFixed(1):'0';
+    const d=+(parseFloat(pa)-parseFloat(pb)).toFixed(1);
+    return{lbl,sb,sa,pb,pa,d};
+  }).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
+
+  const maxSecPct=Math.max(...secCmpRows.map(s=>Math.max(parseFloat(s.pb),parseFloat(s.pa))),1);
+
+  const res=document.getElementById('cmpResult');
+  if(!res)return;
+  res.innerHTML=`
+    <div class="fi" style="margin-bottom:22px">
+      <!-- Hero comparison -->
+      <div class="cmp-hero">
+        <div class="cmp-side before">
+          <div class="cmp-side-tag">📅 قبل</div>
+          <div class="cmp-side-title">${rB.agent||'—'}</div>
+          <div class="cmp-side-date">${rB.timestamp||''}</div>
+          <div class="cmp-big-pct">${pB}%</div>
+          <div class="cmp-meta-row">
+            <div class="cmp-meta"><div class="cmp-meta-v">${rB.total||0}</div><div class="cmp-meta-l">إجمالي</div></div>
+            <div class="cmp-meta"><div class="cmp-meta-v">${rB.arabi||0}</div><div class="cmp-meta-l">العربي</div></div>
+            <div class="cmp-meta"><div class="cmp-meta-v">${secsB.length}</div><div class="cmp-meta-l">أقسام</div></div>
+          </div>
+        </div>
+        <div class="cmp-arrow">
+          <div class="cmp-delta-arrow">${deltaIcon}</div>
+          <div class="cmp-delta-box">
+            <div class="cmp-delta-val" style="color:${deltaCol}">${deltaSign}${delta}%</div>
+            <div class="cmp-delta-lbl">${up?'تحسّن':same?'ثابت':'تراجع'}</div>
+          </div>
+          <div style="font-size:10px;color:var(--tm);text-align:center;max-width:90px">فرع<br><strong style="color:var(--ac2)">${branch}</strong></div>
+        </div>
+        <div class="cmp-side after">
+          <div class="cmp-side-tag">✅ بعد</div>
+          <div class="cmp-side-title">${rA.agent||'—'}</div>
+          <div class="cmp-side-date">${rA.timestamp||''}</div>
+          <div class="cmp-big-pct">${pA}%</div>
+          <div class="cmp-meta-row">
+            <div class="cmp-meta"><div class="cmp-meta-v">${rA.total||0}</div><div class="cmp-meta-l">إجمالي</div></div>
+            <div class="cmp-meta"><div class="cmp-meta-v">${rA.arabi||0}</div><div class="cmp-meta-l">العربي</div></div>
+            <div class="cmp-meta"><div class="cmp-meta-v">${secsA.length}</div><div class="cmp-meta-l">أقسام</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Insights banner -->
+      <div style="background:${up?'rgba(52,211,153,.08)':same?'rgba(14,165,233,.08)':'rgba(248,113,113,.08)'};border:1px solid ${deltaCol}33;border-radius:var(--r);padding:14px 18px;margin-bottom:22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-size:22px">${up?'🎯':same?'📊':'⚠️'}</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:${deltaCol}">
+            ${up?`تحسّن بمقدار ${delta}% منذ التقرير الأول`:same?'النسبة ثابتة دون تغيير':`تراجع بمقدار ${Math.abs(delta)}% منذ التقرير الأول`}
+          </div>
+          <div style="font-size:11px;color:var(--tm);margin-top:3px">
+            ${up?'الأداء في تحسّن مستمر — استمر في هذا المسار':same?'لم يطرأ تغيير — راجع الأقسام الضعيفة':'يُنصح بمراجعة الفرع واتخاذ إجراءات تصحيحية'}
+          </div>
+        </div>
+        <div style="margin-right:auto;text-align:center">
+          <div style="font-size:24px;font-weight:900;color:${deltaCol}">${deltaSign}${delta}%</div>
+          <div style="font-size:10px;color:var(--tm)">الفرق</div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="cmp-chart-row">
+        <div class="chart-card">
+          <div class="chart-title">📈 مسار النسبة عبر جميع التقارير</div>
+          <div class="chart-wrap"><canvas id="cmpLineChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">📊 مقارنة المنتجات</div>
+          <div class="chart-wrap"><canvas id="cmpBarChart2"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Sections comparison -->
+      ${secCmpRows.length?`
+      <div class="sec-header"><h2>📦 مقارنة الأقسام تفصيلياً</h2></div>
+      <div class="cmp-sec-card" style="margin-bottom:22px">
+        <div style="display:flex;gap:18px;margin-bottom:14px;font-size:11px;font-weight:700">
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:rgba(248,113,113,.7);border-radius:3px;display:inline-block"></span> قبل</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:rgba(52,211,153,.7);border-radius:3px;display:inline-block"></span> بعد</span>
+        </div>
+        ${secCmpRows.map(s=>{
+          const dc=s.d>0?'#34d399':s.d<0?'#f87171':'#7dd3fc';
+          const ds=s.d>0?'+':'';
+          return`<div class="cmp-sec-row">
+            <div class="cmp-sec-name">${s.lbl}</div>
+            <div class="cmp-sec-bars">
+              <div class="cmp-bar-row">
+                <span class="cmp-bar-label" style="color:#f87171">قبل</span>
+                <div class="cmp-bar-track"><div class="cmp-bar-fill-b" style="width:${(parseFloat(s.pb)/maxSecPct)*100}%"></div></div>
+                <span style="font-size:10px;font-weight:700;color:#f87171;min-width:32px">${s.pb}%</span>
+              </div>
+              <div class="cmp-bar-row">
+                <span class="cmp-bar-label" style="color:#34d399">بعد</span>
+                <div class="cmp-bar-track"><div class="cmp-bar-fill-a" style="width:${(parseFloat(s.pa)/maxSecPct)*100}%"></div></div>
+                <span style="font-size:10px;font-weight:700;color:#34d399;min-width:32px">${s.pa}%</span>
+              </div>
+            </div>
+            <div class="cmp-sec-delta" style="color:${dc}">${ds}${s.d}%</div>
+          </div>`;
+        }).join('')}
+      </div>`:''}
+
+      <!-- Full timeline for this branch -->
+      <div class="sec-header"><h2>🕐 جميع تقارير الفرع — ${branch}</h2></div>
+      <div class="cmp-timeline">
+        ${br.map((r,i)=>{
+          const pp=parseFloat(r.pct)||0;
+          const prev=i>0?parseFloat(br[i-1].pct)||0:null;
+          const chg=prev!==null?+(pp-prev).toFixed(1):null;
+          const isB=String(r._docId||r.id)===String(beforeKey)||br.indexOf(r)===parseInt(beforeKey);
+          const isA=String(r._docId||r.id)===String(afterKey)||br.indexOf(r)===parseInt(afterKey);
+          const col=pp>=50?'#34d399':pp>=30?'#fbbf24':'#f87171';
+          const bgH=isB?'rgba(248,113,113,.12)':isA?'rgba(52,211,153,.12)':'';
+          const border=isB?'1px solid rgba(248,113,113,.4)':isA?'1px solid rgba(52,211,153,.4)':'';
+          return`<div class="cmp-tl-row" style="background:${bgH};border-radius:8px;padding:10px 12px;${border?'border:'+border:''}">
+            <div class="cmp-tl-num" style="background:${col}22;color:${col}">${i+1}</div>
+            <div class="cmp-tl-info">
+              <div class="cmp-tl-agent">${r.agent||'—'} ${isB?'<span style="font-size:10px;background:rgba(248,113,113,.2);color:#f87171;padding:1px 6px;border-radius:10px">قبل</span>':isA?'<span style="font-size:10px;background:rgba(52,211,153,.2);color:#34d399;padding:1px 6px;border-radius:10px">بعد</span>':''}</div>
+              <div class="cmp-tl-date">${r.timestamp||''} — إجمالي: ${r.total||0} | عربي: ${r.arabi||0}</div>
+            </div>
+            <div class="cmp-tl-pct" style="color:${col}">${pp}%</div>
+            ${chg!==null?`<div class="cmp-tl-change" style="color:${chg>0?'#34d399':chg<0?'#f87171':'#7dd3fc'}">${chg>0?'+':''}${chg}%</div>`:'<div class="cmp-tl-change" style="color:var(--tm)">—</div>'}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  // Draw charts
+  setTimeout(()=>drawCmpCharts(br, rB, rA),80);
+}
+
+function drawCmpCharts(br, rB, rA){
+  // Line chart — full timeline
+  const ctx1=document.getElementById('cmpLineChart');
+  if(ctx1){
+    if(cmpCharts.line)cmpCharts.line.destroy();
+    const labels=br.map((r,i)=>`${i+1}.${r.agent||'—'}`);
+    const data=br.map(r=>parseFloat(r.pct)||0);
+    const ptColors=br.map(r=>{
+      const isB=String(r._docId||r.id)===String(document.getElementById('cmpBeforeSel')?.value);
+      const isA=String(r._docId||r.id)===String(document.getElementById('cmpAfterSel')?.value);
+      return isB?'rgba(248,113,113,1)':isA?'rgba(52,211,153,1)':'rgba(14,165,233,.8)';
+    });
+    const ptSize=br.map(r=>{
+      const isB=String(r._docId||r.id)===String(document.getElementById('cmpBeforeSel')?.value);
+      const isA=String(r._docId||r.id)===String(document.getElementById('cmpAfterSel')?.value);
+      return(isB||isA)?8:4;
+    });
+    cmpCharts.line=new Chart(ctx1,{type:'line',
+      data:{labels,datasets:[{
+        label:'نسبة العربي %',data,
+        borderColor:'rgba(14,165,233,.8)',backgroundColor:'rgba(14,165,233,.06)',
+        pointBackgroundColor:ptColors,pointRadius:ptSize,
+        borderWidth:2,tension:.3,fill:true
+      }]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw}%`}}},
+        scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%',color:'rgba(125,211,252,.8)',font:{size:10}},grid:{color:'rgba(14,165,233,.06)'}},
+                x:{ticks:{color:'rgba(125,211,252,.8)',font:{size:9}},grid:{display:false}}}}});
+  }
+  // Bar chart — before vs after products
+  const ctx2=document.getElementById('cmpBarChart2');
+  if(ctx2){
+    if(cmpCharts.bar2)cmpCharts.bar2.destroy();
+    cmpCharts.bar2=new Chart(ctx2,{type:'bar',
+      data:{
+        labels:['إجمالي المنتجات','منتجات العربي','نسبة العربي %'],
+        datasets:[
+          {label:'قبل',data:[rB.total||0,rB.arabi||0,parseFloat(rB.pct)||0],
+            backgroundColor:'rgba(248,113,113,.7)',borderRadius:6,borderSkipped:false},
+          {label:'بعد',data:[rA.total||0,rA.arabi||0,parseFloat(rA.pct)||0],
+            backgroundColor:'rgba(52,211,153,.7)',borderRadius:6,borderSkipped:false}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{color:'rgba(125,211,252,.9)',font:{size:11},usePointStyle:true}}},
+        scales:{y:{beginAtZero:true,ticks:{color:'rgba(125,211,252,.8)',font:{size:10}},grid:{color:'rgba(14,165,233,.06)'}},
+                x:{ticks:{color:'rgba(125,211,252,.8)',font:{size:10}},grid:{display:false}}}}});
+  }
+}
+
+
+// ══════════════════════════════════════════
+// عرض شامل — كل الفروع قبل وبعد
+// ══════════════════════════════════════════
+function renderAllBranchesFullReport(){
+  const res=document.getElementById('cmpResult');
+  if(!res)return;
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+  const cmpBranches=branches.filter(b=>reports.filter(r=>r.branch===b).length>=2);
+
+  if(!cmpBranches.length){
+    res.innerHTML=`<div class="no-data-cmp fi" style="padding:40px;text-align:center"><div class="ei">📊</div><h3>لا توجد فروع بتقارير متعددة بعد</h3></div>`;
+    return;
+  }
+
+  // حساب إجمالي التحسن لكل الفروع
+  const allStats=cmpBranches.map(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    br.sort((a,x)=>(a.createdAt?.seconds||0)-(x.createdAt?.seconds||0));
+    const first=br[0], last=br[br.length-1];
+    const pF=parseFloat(first?.pct)||0, pL=parseFloat(last?.pct)||0;
+    const d=+(pL-pF).toFixed(1);
+    const totalF=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const arabiF=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    const avgPct=totalF>0?+((arabiF/totalF)*100).toFixed(1):0;
+    return{b, br, first, last, pF, pL, d, len:br.length, totalF, arabiF, avgPct};
+  }).sort((a,x)=>x.d-a.d);
+
+  const improved=allStats.filter(s=>s.d>0).length;
+  const declined=allStats.filter(s=>s.d<0).length;
+  const stable=allStats.filter(s=>s.d===0).length;
+  const bestBranch=allStats[0];
+  const worstD=allStats.filter(s=>s.d<0).sort((a,b)=>a.d-b.d)[0];
+
+  res.innerHTML=`
+    <div class="fi" style="margin-bottom:22px">
+      <!-- ═══ لوحة الملخص الإجمالي ═══ -->
+      <div style="background:linear-gradient(135deg,rgba(14,165,233,.1),rgba(6,182,212,.06));border:1px solid rgba(14,165,233,.3);border-radius:var(--r);padding:20px 22px;margin-bottom:20px;">
+        <div style="font-size:15px;font-weight:900;color:var(--ac2);margin-bottom:14px;display:flex;align-items:center;gap:8px;">🌐 التقرير الشامل — مقارنة كل الفروع قبل وبعد</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;">
+          <div style="background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.2);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:26px;font-weight:900;color:var(--ac2)">${cmpBranches.length}</div>
+            <div style="font-size:11px;color:var(--tm);margin-top:4px">فرع قابل للمقارنة</div>
+          </div>
+          <div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:26px;font-weight:900;color:#34d399">${improved}</div>
+            <div style="font-size:11px;color:var(--tm);margin-top:4px">📈 فرع تحسّن</div>
+          </div>
+          <div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:26px;font-weight:900;color:#f87171">${declined}</div>
+            <div style="font-size:11px;color:var(--tm);margin-top:4px">📉 فرع تراجع</div>
+          </div>
+          <div style="background:rgba(125,211,252,.08);border:1px solid rgba(125,211,252,.2);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:26px;font-weight:900;color:var(--tm)">${stable}</div>
+            <div style="font-size:11px;color:var(--tm);margin-top:4px">➡️ فرع ثابت</div>
+          </div>
+          ${bestBranch?`<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:14px;font-weight:900;color:#fbbf24">🏆 ${bestBranch.b}</div>
+            <div style="font-size:11px;color:var(--tm);margin-top:4px">أكبر تحسّن +${bestBranch.d}%</div>
+          </div>`:''}
+          ${worstD?`<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:14px;font-weight:900;color:#f87171">⚠️ ${worstD.b}</div>
+            <div style="font-size:11px;color:var(--tm);margin-top:4px">أكبر تراجع ${worstD.d}%</div>
+          </div>`:''}
+        </div>
+      </div>
+
+      <!-- ═══ جدول المقارنة الإجمالي ═══ -->
+      <div class="tbl-card fi" style="margin-bottom:20px">
+        <div class="tbl-title">📊 جدول المقارنة — ترتيب حسب التغيير</div>
+        <table class="dt"><thead><tr>
+          <th>الترتيب</th><th>الفرع</th><th>التقارير</th>
+          <th>أول نسبة (قبل)</th><th>آخر نسبة (بعد)</th>
+          <th>التغيير</th><th>المتوسط الكلي</th><th>الحكم</th>
+        </tr></thead><tbody>
+          ${allStats.map((s,i)=>{
+            const dc=s.d>0?'#34d399':s.d<0?'#f87171':'#7dd3fc';
+            const di=s.d>0?'📈':s.d<0?'📉':'➡️';
+            const cls=s.avgPct>=50?'high':s.avgPct>=30?'mid':'low';
+            return`<tr>
+              <td style="text-align:center;font-weight:700">${i+1}</td>
+              <td><strong style="color:var(--ac2)">${s.b}</strong></td>
+              <td style="text-align:center;color:var(--tm)">${s.len}</td>
+              <td style="text-align:center;color:#f87171;font-weight:700">${s.pF}%</td>
+              <td style="text-align:center;color:#34d399;font-weight:700">${s.pL}%</td>
+              <td style="text-align:center"><span style="font-weight:900;color:${dc}">${s.d>0?'+':''}${s.d}% ${di}</span></td>
+              <td style="text-align:center"><span class="pbadge ${cls}">${s.avgPct}%</span></td>
+              <td style="text-align:center;font-size:12px">${s.d>0?'تحسّن ✅':s.d<0?'تراجع ❌':'ثابت ➡️'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody></table>
+      </div>
+
+      <!-- ═══ بطاقة تفصيلية لكل فرع ═══ -->
+      <div class="sec-header"><h2>🏢 التحليل التفصيلي لكل فرع</h2></div>
+      ${allStats.map(s=>{
+        const dc=s.d>0?'#34d399':s.d<0?'#f87171':'#7dd3fc';
+        const di=s.d>0?'📈':s.d<0?'📉':'➡️';
+
+        // Sections comparison (first vs last)
+        const secsF=s.first.sections||[], secsL=s.last.sections||[];
+        const allLbls=[...new Set([...secsF.map(x=>x.label),...secsL.map(x=>x.label)])];
+        const secRows=allLbls.map(lbl=>{
+          const sf=secsF.find(x=>x.label===lbl)||{count:0,arabi:0};
+          const sl=secsL.find(x=>x.label===lbl)||{count:0,arabi:0};
+          const pf=sf.count>0?+((sf.arabi/sf.count)*100).toFixed(1):0;
+          const pl=sl.count>0?+((sl.arabi/sl.count)*100).toFixed(1):0;
+          const dd=+(pl-pf).toFixed(1);
+          return{lbl,pf,pl,dd};
+        }).sort((a,b)=>Math.abs(b.dd)-Math.abs(a.dd));
+
+        return`<div style="background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:20px;margin-bottom:18px;border-right:3px solid ${dc};">
+          <!-- رأس الفرع -->
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+            <div style="font-size:15px;font-weight:900;color:var(--ac2)">🏢 ${s.b}</div>
+            <div style="font-size:12px;color:var(--tm)">${s.len} تقارير</div>
+            <div style="margin-right:auto;display:flex;align-items:center;gap:8px;">
+              <span style="font-size:13px;font-weight:700;color:#f87171">${s.pF}%</span>
+              <span style="font-size:16px;">${di}</span>
+              <span style="font-size:13px;font-weight:700;color:#34d399">${s.pL}%</span>
+              <span style="font-size:14px;font-weight:900;color:${dc};background:${dc}22;padding:3px 10px;border-radius:20px;">${s.d>0?'+':''}${s.d}%</span>
+            </div>
+          </div>
+
+          <!-- قبل / بعد cards inline -->
+          <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-bottom:14px;">
+            <div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:10px;font-weight:700;color:#f87171;margin-bottom:6px;">📅 قبل — ${s.first.agent||'—'}</div>
+              <div style="font-size:28px;font-weight:900;color:#f87171">${s.pF}%</div>
+              <div style="font-size:10px;color:var(--tm);margin-top:4px">${s.first.timestamp||''}</div>
+              <div style="font-size:10px;color:var(--tm)">إجمالي: ${s.first.total||0} | عربي: ${s.first.arabi||0}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:24px">${di}</div>
+              <div style="font-size:14px;font-weight:900;color:${dc}">${s.d>0?'+':''}${s.d}%</div>
+              <div style="font-size:10px;color:${dc}">${s.d>0?'تحسّن':s.d<0?'تراجع':'ثابت'}</div>
+            </div>
+            <div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px;">✅ بعد — ${s.last.agent||'—'}</div>
+              <div style="font-size:28px;font-weight:900;color:#34d399">${s.pL}%</div>
+              <div style="font-size:10px;color:var(--tm);margin-top:4px">${s.last.timestamp||''}</div>
+              <div style="font-size:10px;color:var(--tm)">إجمالي: ${s.last.total||0} | عربي: ${s.last.arabi||0}</div>
+            </div>
+          </div>
+
+          <!-- الأقسام قبل وبعد -->
+          ${secRows.length?`
+          <div style="font-size:12px;font-weight:700;color:var(--tm);margin-bottom:8px">📦 مقارنة الأقسام</div>
+          ${secRows.map(sr=>{
+            const sc=sr.dd>0?'#34d399':sr.dd<0?'#f87171':'#7dd3fc';
+            const maxP=Math.max(sr.pf,sr.pl,1);
+            return`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(14,165,233,.06)">
+              <div style="font-size:11px;font-weight:600;color:var(--tx);min-width:80px;flex:1">${sr.lbl}</div>
+              <div style="flex:2;display:flex;flex-direction:column;gap:3px">
+                <div style="display:flex;align-items:center;gap:6px;font-size:10px">
+                  <span style="width:26px;color:#f87171;font-weight:700">قبل</span>
+                  <div style="flex:1;height:5px;background:rgba(14,165,233,.1);border-radius:10px"><div style="height:100%;border-radius:10px;background:rgba(248,113,113,.7);width:${(sr.pf/maxP)*100}%"></div></div>
+                  <span style="min-width:30px;font-weight:700;color:#f87171">${sr.pf}%</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:10px">
+                  <span style="width:26px;color:#34d399;font-weight:700">بعد</span>
+                  <div style="flex:1;height:5px;background:rgba(14,165,233,.1);border-radius:10px"><div style="height:100%;border-radius:10px;background:rgba(52,211,153,.7);width:${(sr.pl/maxP)*100}%"></div></div>
+                  <span style="min-width:30px;font-weight:700;color:#34d399">${sr.pl}%</span>
+                </div>
+              </div>
+              <div style="min-width:44px;text-align:left;font-size:12px;font-weight:900;color:${sc}">${sr.dd>0?'+':''}${sr.dd}%</div>
+            </div>`;
+          }).join('')}`:''}
+
+          <!-- جدول كل تقارير الفرع -->
+          <div style="font-size:12px;font-weight:700;color:var(--tm);margin-top:12px;margin-bottom:8px">📋 سجل جميع التقارير</div>
+          <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
+            ${s.br.map((r,i)=>{
+              const pp=parseFloat(r.pct)||0;
+              const prev=i>0?parseFloat(s.br[i-1].pct)||0:null;
+              const chg=prev!==null?+(pp-prev).toFixed(1):null;
+              const col=pp>=50?'#34d399':pp>=30?'#fbbf24':'#f87171';
+              return`<div style="flex-shrink:0;background:rgba(14,165,233,.06);border:1px solid ${col}33;border-radius:10px;padding:10px 14px;text-align:center;min-width:88px">
+                <div style="font-size:10px;color:var(--tm);margin-bottom:4px">${i+1}. ${r.agent||'—'}</div>
+                <div style="font-size:20px;font-weight:900;color:${col}">${pp}%</div>
+                <div style="font-size:9px;color:var(--tm);margin-top:3px">${(r.timestamp||'').slice(0,10)}</div>
+                ${chg!==null?`<div style="font-size:11px;font-weight:700;margin-top:4px;color:${chg>0?'#34d399':chg<0?'#f87171':'#7dd3fc'}">${chg>0?'+':''}${chg}%</div>`:'<div style="font-size:11px;color:var(--tm);margin-top:4px">بداية</div>'}
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderAllBranchTimelines(cmpBranches){
+  const cont=document.getElementById('cmpAllBranches');
+  if(!cont)return;
+  let html='';
+  cmpBranches.forEach(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    br.sort((a,x)=>(a.createdAt?.seconds||0)-(x.createdAt?.seconds||0));
+    const first=br[0], last=br[br.length-1];
+    const pFirst=parseFloat(first?.pct)||0, pLast=parseFloat(last?.pct)||0;
+    const d=+(pLast-pFirst).toFixed(1);
+    const dc=d>0?'#34d399':d<0?'#f87171':'#7dd3fc';
+    const di=d>0?'📈':d<0?'📉':'➡️';
+    html+=`
+      <div style="background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:18px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+          <span style="font-size:15px;font-weight:700;color:var(--ac2)">🏢 ${b}</span>
+          <span style="font-size:12px;color:var(--tm)">${br.length} تقارير</span>
+          <span style="margin-right:auto;font-size:14px;font-weight:700;color:${dc}">${di} ${d>0?'+':''}${d}% منذ أول تقرير</span>
+          <button style="background:rgba(14,165,233,.12);border:1px solid rgba(14,165,233,.3);color:var(--ac2);font-family:'Cairo',sans-serif;font-size:11px;padding:5px 12px;border-radius:8px;cursor:pointer"
+            onclick="document.getElementById('cmpBranchSel').value='${b}';onCmpBranchChange();document.querySelector('.cmp-filter').scrollIntoView({behavior:'smooth'})">
+            مقارنة تفصيلية ←
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
+          ${br.map((r,i)=>{
+            const pp=parseFloat(r.pct)||0;
+            const prev=i>0?parseFloat(br[i-1].pct)||0:null;
+            const chg=prev!==null?+(pp-prev).toFixed(1):null;
+            const col=pp>=50?'#34d399':pp>=30?'#fbbf24':'#f87171';
+            return`<div style="flex-shrink:0;background:rgba(14,165,233,.06);border:1px solid ${col}33;border-radius:10px;padding:10px 14px;text-align:center;min-width:90px">
+              <div style="font-size:10px;color:var(--tm);margin-bottom:4px">${i+1}. ${r.agent||'—'}</div>
+              <div style="font-size:20px;font-weight:900;color:${col}">${pp}%</div>
+              <div style="font-size:9px;color:var(--tm);margin-top:3px">${(r.timestamp||'').slice(0,10)}</div>
+              ${chg!==null?`<div style="font-size:11px;font-weight:700;margin-top:4px;color:${chg>0?'#34d399':chg<0?'#f87171':'#7dd3fc'}">${chg>0?'+':''}${chg}%</div>`:'<div style="font-size:11px;color:var(--tm);margin-top:4px">بداية</div>'}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  });
+  cont.innerHTML=html;
+}
+
+// ══════════════════════════════════════════
+// Excel — تبويب التقارير
+// ══════════════════════════════════════════
+function exportExcelReports(){
+  if(!reports.length){showToast('لا توجد بيانات','err');return;}
+  const wb=XLSX.utils.book_new();
+  const filter=document.getElementById('repBranchFilter')?.value||'';
+  const filtered=filter?reports.filter(r=>r.branch===filter):reports;
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+
+  // ملخص
+  const totalP=filtered.reduce((s,r)=>s+(Number(r.total)||0),0);
+  const totalA=filtered.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+  const avg=totalP>0?((totalA/totalP)*100).toFixed(1):0;
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+    ['تقرير التقارير'+(filter?' — فرع: '+filter:''),'','',''],
+    ['تاريخ التصدير',new Date().toLocaleString('ar-EG'),'',''],
+    ['','','',''],
+    ['عدد التقارير','إجمالي المنتجات','منتجات العربي','النسبة'],
+    [filtered.length,totalP,totalA,avg+'%']
+  ]),'ملخص');
+
+  // جدول التقارير
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+    ['#','الفرع','المندوب','الإجمالي','العربي','النسبة %','التاريخ'],
+    ...filtered.map((r,i)=>[i+1,r.branch,r.agent,r.total,r.arabi,parseFloat(r.pct),r.timestamp])
+  ]),'التقارير'+(filter?'-'+filter:''));
+
+  // أقسام لكل تقرير
+  filtered.forEach((r,i)=>{
+    const secs=r.sections||[];
+    if(!secs.length)return;
+    const shName=('تقرير'+(i+1)+'-'+r.branch).slice(0,31);
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+      ['التقرير رقم '+(i+1),'الفرع: '+r.branch,'المندوب: '+r.agent,'التاريخ: '+r.timestamp,'النسبة: '+r.pct+'%'],
+      ['','','','',''],
+      ['القسم','الإجمالي','العربي','النسبة %',''],
+      ...secs.map(s=>{const p=s.count>0?((s.arabi/s.count)*100).toFixed(1):0;return[s.label,s.count,s.arabi,parseFloat(p),''];})
+    ]),shName);
+  });
+
+  const fname=`تقارير${filter?'_'+filter:''}_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.xlsx`;
+  XLSX.writeFile(wb,fname);
+  showToast('تم تحميل Excel التقارير ✓');
+}
+
+// ══════════════════════════════════════════
+// Excel — تبويب الفروع
+// ══════════════════════════════════════════
+function exportExcelBranches(){
+  if(!reports.length){showToast('لا توجد بيانات','err');return;}
+  const wb=XLSX.utils.book_new();
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+  const focusBranch=selectedBranch||null;
+
+  // ملخص مقارنة الفروع
+  const branchData=branches.map(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    const t=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const a=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    const p=t>0?((a/t)*100).toFixed(1):0;
+    return{b,len:br.length,t,a,p:parseFloat(p)};
+  }).sort((x,y)=>y.p-x.p);
+
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+    ['تحليل الفروع'+(focusBranch?' — تركيز على: '+focusBranch:''),'','','','',''],
+    ['تاريخ التصدير',new Date().toLocaleString('ar-EG'),'','','',''],['','','','','',''],
+    ['الترتيب','الفرع','التقارير','الإجمالي','العربي','النسبة %','التقييم'],
+    ...branchData.map((r,i)=>[i+1,r.b,r.len,r.t,r.a,r.p,r.p>=50?'ممتاز':r.p>=30?'جيد':'يحتاج تحسين'])
+  ]),'ترتيب الفروع');
+
+  // ورقة لكل فرع
+  const targetBranches=focusBranch?[focusBranch]:branches;
+  targetBranches.forEach(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    br.sort((a,x)=>(a.createdAt?.seconds||0)-(x.createdAt?.seconds||0));
+    const shName=b.slice(0,31);
+    const rows=[
+      ['فرع: '+b,'','','',''],
+      ['عدد التقارير',br.length,'','',''],
+      ['','','','',''],
+      ['#','المندوب','الإجمالي','العربي','النسبة %','التاريخ'],
+      ...br.map((r,i)=>[i+1,r.agent,r.total,r.arabi,parseFloat(r.pct),r.timestamp]),
+      ['','','','',''],
+      ['— أقسام الفرع —','','','',''],
+      ['القسم','الإجمالي','العربي','النسبة %',''],
+    ];
+    const secs=calcSections(br);
+    secs.forEach(s=>rows.push([s.l,s.count,s.arabi,parseFloat(s.p),'']));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),shName);
+  });
+
+  const fname=`الفروع${focusBranch?'_'+focusBranch:''}_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.xlsx`;
+  XLSX.writeFile(wb,fname);
+  showToast('تم تحميل Excel الفروع ✓');
+}
+
+// ══════════════════════════════════════════
+// Excel — تبويب الإحصائيات
+// ══════════════════════════════════════════
+function exportExcelStatistics(){
+  if(!reports.length){showToast('لا توجد بيانات','err');return;}
+  const wb=XLSX.utils.book_new();
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+  const totalP=reports.reduce((s,r)=>s+(Number(r.total)||0),0);
+  const totalA=reports.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+  const avg=totalP>0?((totalA/totalP)*100).toFixed(1):0;
+
+  // KPIs
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+    ['الإحصائيات الشاملة','','',''],
+    ['تاريخ التصدير',new Date().toLocaleString('ar-EG'),'',''],['','','',''],
+    ['إجمالي التقارير','عدد الفروع','منتجات العربي','المتوسط العام'],
+    [reports.length,branches.length,totalA,avg+'%']
+  ]),'KPIs');
+
+  // ترتيب الفروع
+  const branchStats=branches.map(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    const t=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const a=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    const p=t>0?((a/t)*100).toFixed(1):0;
+    const share=totalA>0?((a/totalA)*100).toFixed(1):0;
+    return{b,len:br.length,t,a,p:parseFloat(p),share};
+  }).sort((x,y)=>y.p-x.p);
+
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+    ['ترتيب الفروع حسب الأداء','','','','','',''],['','','','','','',''],
+    ['الترتيب','الفرع','التقارير','الإجمالي','العربي','النسبة %','الحصة %','التقييم'],
+    ...branchStats.map((r,i)=>[i+1,r.b,r.len,r.t,r.a,r.p,r.share,r.p>=50?'ممتاز':r.p>=30?'جيد':'يحتاج تحسين'])
+  ]),'ترتيب الفروع');
+
+  // أقسام كل فرع
+  branches.forEach(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    const secs=calcSections(br);
+    if(!secs.length)return;
+    const shName=('أقسام-'+b).slice(0,31);
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+      ['أقسام فرع: '+b,'','','',''],['','','','',''],
+      ['القسم','الإجمالي','العربي','النسبة %','التقييم'],
+      ...secs.map(s=>[s.l,s.count,s.arabi,parseFloat(s.p),parseFloat(s.p)>=50?'ممتاز':parseFloat(s.p)>=30?'جيد':'يحتاج تحسين'])
+    ]),shName);
+  });
+
+  // اتجاه النسب
+  const sorted=[...reports].sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+    ['اتجاه النسب عبر الزمن','','',''],['','','',''],
+    ['#','الفرع','المندوب','النسبة %','التاريخ'],
+    ...sorted.map((r,i)=>[i+1,r.branch,r.agent,parseFloat(r.pct),r.timestamp])
+  ]),'اتجاه النسب');
+
+  XLSX.writeFile(wb,`الإحصائيات_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.xlsx`);
+  showToast('تم تحميل Excel الإحصائيات ✓');
+}
+
+// ══════════════════════════════════════════
+// Excel — تبويب المقارنة
+// ══════════════════════════════════════════
+function exportExcelComparison(){
+  if(!reports.length){showToast('لا توجد بيانات','err');return;}
+  const selVal=document.getElementById('cmpBranchSel')?.value||'__ALL__';
+  const wb=XLSX.utils.book_new();
+  const allBranches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+  const targetBranches=selVal==='__ALL__'
+    ? allBranches.filter(b=>reports.filter(r=>r.branch===b).length>=2)
+    : (allBranches.includes(selVal)?[selVal]:[]);
+
+  // ═══ ورقة الملخص ═══
+  const summaryRows=[
+    ['تقرير المقارنة — نسب عرض العربي','','','','','',''],
+    ['تاريخ التصدير',new Date().toLocaleString('ar-EG'),'','','','',''],
+    ['الفروع المُصدَّرة',targetBranches.length,'','','','',''],
+    ['','','','','','',''],
+    ['الفرع','عدد التقارير','أول نسبة (قبل)','آخر نسبة (بعد)','التغيير','المتوسط الكلي','الحكم']
+  ];
+  targetBranches.forEach(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    br.sort((a,x)=>(a.createdAt?.seconds||0)-(x.createdAt?.seconds||0));
+    const pF=parseFloat(br[0].pct)||0;
+    const pL=parseFloat(br[br.length-1].pct)||0;
+    const d=+(pL-pF).toFixed(1);
+    const tAll=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const aAll=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    const avg=tAll>0?+((aAll/tAll)*100).toFixed(1):0;
+    summaryRows.push([b,br.length,pF,pL,d,avg,d>0?'تحسّن ✅':d<0?'تراجع ❌':'ثابت ➡️']);
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summaryRows),'ملخص المقارنة');
+
+  // ═══ ورقة تفصيلية لكل فرع ═══
+  targetBranches.forEach(b=>{
+    const br=reports.filter(r=>r.branch===b);
+    br.sort((a,x)=>(a.createdAt?.seconds||0)-(x.createdAt?.seconds||0));
+    const shName=('مقارنة-'+b).slice(0,31);
+    const tAll=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const aAll=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    const avg=tAll>0?+((aAll/tAll)*100).toFixed(1):0;
+    const pF=parseFloat(br[0].pct)||0, pL=parseFloat(br[br.length-1].pct)||0;
+    const d=+(pL-pF).toFixed(1);
+
+    const rows=[
+      ['فرع: '+b,'','','','','',''],
+      ['عدد التقارير',br.length,'المتوسط الكلي',avg+'%','','',''],
+      ['أول نسبة',pF+'%','آخر نسبة',pL+'%','التغيير',(d>0?'+':'')+d+'%',''],
+      ['','','','','','',''],
+      ['#','المندوب','النسبة %','الإجمالي','العربي','التغيير عن السابق','التاريخ']
+    ];
+    br.forEach((r,i)=>{
+      const pp=parseFloat(r.pct)||0;
+      const prev=i>0?parseFloat(br[i-1].pct)||0:null;
+      const chg=prev!==null?+(pp-prev).toFixed(1):'—';
+      rows.push([i+1,r.agent,pp,r.total,r.arabi,chg,r.timestamp]);
+    });
+
+    // أقسام أول vs آخر
+    const secsFirst=br[0].sections||[], secsLast=br[br.length-1].sections||[];
+    const allLbls=[...new Set([...secsFirst.map(s=>s.label),...secsLast.map(s=>s.label)])];
+    if(allLbls.length){
+      rows.push(['','','','','','','']);
+      rows.push(['— مقارنة الأقسام: أول تقرير vs آخر تقرير —','','','','','','']);
+      rows.push(['القسم','نسبة قبل %','نسبة بعد %','الفرق','الاتجاه','','']);
+      allLbls.forEach(lbl=>{
+        const sf=secsFirst.find(s=>s.label===lbl)||{count:0,arabi:0};
+        const sl=secsLast.find(s=>s.label===lbl)||{count:0,arabi:0};
+        const pf=sf.count>0?+((sf.arabi/sf.count)*100).toFixed(1):0;
+        const pl=sl.count>0?+((sl.arabi/sl.count)*100).toFixed(1):0;
+        const dd=+(pl-pf).toFixed(1);
+        rows.push([lbl,pf,pl,dd,dd>0?'تحسّن':dd<0?'تراجع':'ثابت','','']);
+      });
+    }
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),shName);
+  });
+
+  const fname=`المقارنة_${selVal==='__ALL__'?'كل_الفروع':selVal}_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.xlsx`;
+  XLSX.writeFile(wb,fname);
+  showToast(`تم تحميل Excel المقارنة — ${targetBranches.length} فرع ✓`);
+}
+
+// ══════════════════════════════════════════
+// PPT — تبويب التقارير
+// ══════════════════════════════════════════
+async function exportPPTReports(){
+  if(!reports.length){showToast('لا توجد بيانات','err');return;}
+  const PptxCtor=window.PptxGenJS||window.pptxgen||window.PptxGen;
+  if(!PptxCtor){showToast('مكتبة PowerPoint لم تُحمَّل بعد','err');return;}
+  setPPTLoading(true);
+  try{
+    const pptx=new PptxCtor(); pptx.layout='LAYOUT_16x9';
+    const BG='060e1e',BLUE='0ea5e9',CYAN='67e8f9',WH='e0f2fe',MT='7dd3fc',GREEN='34d399',YELLOW='fbbf24',RED='f87171',DARK='0f2040';
+    const addHdr=(sl,t)=>{
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:.55,fill:{color:DARK}});
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:.55,w:'100%',h:.03,fill:{color:BLUE}});
+      sl.addText(t,{x:.35,y:.06,w:9.3,h:.43,fontSize:17,bold:true,color:CYAN,rtlMode:true});
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:5.57,w:'100%',h:.03,fill:{color:BLUE}});
+      sl.addText('نظام نسب عرض العربي | '+new Date().toLocaleDateString('ar-EG'),{x:.3,y:5.62,w:9.4,h:.25,fontSize:8,color:MT,rtlMode:true});
+    };
+    const filter=document.getElementById('repBranchFilter')?.value||'';
+    const filtered=filter?reports.filter(r=>r.branch===filter):reports;
+
+    // Cover
+    const sc=pptx.addSlide();sc.background={color:BG};
+    sc.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:2,fill:{color:DARK}});
+    sc.addShape(pptx.ShapeType.rect,{x:0,y:2,w:'100%',h:.04,fill:{color:BLUE}});
+    sc.addText('📋',{x:4.3,y:.2,w:1.4,h:.9,fontSize:40,align:'center'});
+    sc.addText('تقرير التقارير'+(filter?' — '+filter:''),{x:.8,y:.95,w:8.4,h:.75,fontSize:26,bold:true,color:CYAN,align:'center',rtlMode:true});
+    sc.addText(`${filtered.length} تقرير | ${new Date().toLocaleDateString('ar-EG')}`,{x:.8,y:2.3,w:8.4,h:.4,fontSize:13,color:MT,align:'center',rtlMode:true});
+
+    // Reports table slide(s) — 10 per slide
+    const chunkSize=10;
+    for(let i=0;i<filtered.length;i+=chunkSize){
+      const chunk=filtered.slice(i,i+chunkSize);
+      const sl=pptx.addSlide();sl.background={color:BG};
+      addHdr(sl,'التقارير'+(filter?' — '+filter:'')+(filtered.length>chunkSize?' ('+(Math.floor(i/chunkSize)+1)+'/'+(Math.ceil(filtered.length/chunkSize))+')':''));
+      const h=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:10}});
+      const tbl=[[h('#'),h('الفرع'),h('المندوب'),h('الإجمالي'),h('العربي'),h('النسبة %'),h('التاريخ')]];
+      chunk.forEach((r,j)=>{
+        const rp=parseFloat(r.pct)||0;const rc=rp>=50?GREEN:rp>=30?YELLOW:RED;
+        tbl.push([
+          {text:String(i+j+1),options:{color:MT,align:'center',fontSize:10}},
+          {text:r.branch||'—',options:{color:WH,rtlMode:true,fontSize:10}},
+          {text:r.agent||'—',options:{color:MT,rtlMode:true,fontSize:10}},
+          {text:String(r.total||0),options:{color:MT,align:'center',fontSize:10}},
+          {text:String(r.arabi||0),options:{color:MT,align:'center',fontSize:10}},
+          {text:(r.pct||0)+'%',options:{color:rc,bold:true,align:'center',fontSize:11}},
+          {text:(r.timestamp||'').slice(0,10),options:{color:MT,align:'center',fontSize:9}},
+        ]);
+      });
+      sl.addTable(tbl,{x:.3,y:.68,w:9.4,rowH:.34,fontSize:10,border:{type:'solid',color:'0ea5e9',pt:.3}});
+    }
+    await pptx.writeFile({fileName:`تقارير${filter?'_'+filter:''}_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.pptx`});
+    showToast('✅ تم تحميل PowerPoint التقارير');
+  }catch(e){showToast('خطأ: '+e.message,'err');}
+  finally{setPPTLoading(false);}
+}
+
+// ══════════════════════════════════════════
+// PPT — تبويب الفروع
+// ══════════════════════════════════════════
+async function exportPPTBranches(){
+  if(!reports.length){showToast('لا توجد بيانات','err');return;}
+  const PptxCtor=window.PptxGenJS||window.pptxgen||window.PptxGen;
+  if(!PptxCtor){showToast('مكتبة PowerPoint لم تُحمَّل بعد','err');return;}
+  setPPTLoading(true);
+  try{
+    const pptx=new PptxCtor(); pptx.layout='LAYOUT_16x9';
+    const BG='060e1e',BLUE='0ea5e9',CYAN='67e8f9',WH='e0f2fe',MT='7dd3fc',GREEN='34d399',YELLOW='fbbf24',RED='f87171',DARK='0f2040';
+    const addHdr=(sl,t)=>{
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:.55,fill:{color:DARK}});
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:.55,w:'100%',h:.03,fill:{color:BLUE}});
+      sl.addText(t,{x:.35,y:.06,w:9.3,h:.43,fontSize:17,bold:true,color:CYAN,rtlMode:true});
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:5.57,w:'100%',h:.03,fill:{color:BLUE}});
+      sl.addText('نظام نسب عرض العربي | '+new Date().toLocaleDateString('ar-EG'),{x:.3,y:5.62,w:9.4,h:.25,fontSize:8,color:MT,rtlMode:true});
+    };
+    const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+    const focusBranch=selectedBranch||null;
+    const targetBranches=focusBranch?[focusBranch]:branches;
+    const branchStats=branches.map(b=>{
+      const br=reports.filter(r=>r.branch===b);
+      const t=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+      const a=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+      const p=t>0?((a/t)*100).toFixed(1):0;
+      return{b,len:br.length,t,a,p:parseFloat(p)};
+    }).sort((x,y)=>y.p-x.p);
+
+    // Cover
+    const sc=pptx.addSlide();sc.background={color:BG};
+    sc.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:2,fill:{color:DARK}});
+    sc.addShape(pptx.ShapeType.rect,{x:0,y:2,w:'100%',h:.04,fill:{color:BLUE}});
+    sc.addText('🏢',{x:4.3,y:.2,w:1.4,h:.9,fontSize:40,align:'center'});
+    sc.addText('تحليل الفروع'+(focusBranch?' — '+focusBranch:''),{x:.8,y:.95,w:8.4,h:.75,fontSize:26,bold:true,color:CYAN,align:'center',rtlMode:true});
+    sc.addText(`${targetBranches.length} فرع | ${new Date().toLocaleDateString('ar-EG')}`,{x:.8,y:2.3,w:8.4,h:.4,fontSize:13,color:MT,align:'center',rtlMode:true});
+
+    // Ranking slide
+    if(!focusBranch){
+      const sr=pptx.addSlide();sr.background={color:BG};
+      addHdr(sr,'ترتيب الفروع حسب الأداء');
+      const h=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:11}});
+      const tbl=[[h('الترتيب'),h('الفرع'),h('التقارير'),h('الإجمالي'),h('العربي'),h('النسبة'),h('التقييم')]];
+      branchStats.forEach((row,i)=>{
+        const pc=row.p>=50?GREEN:row.p>=30?YELLOW:RED;
+        tbl.push([
+          {text:String(i+1),options:{color:MT,align:'center',fontSize:11}},
+          {text:(i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':'')+row.b,options:{color:WH,rtlMode:true,bold:true,fontSize:11}},
+          {text:String(row.len),options:{color:MT,align:'center',fontSize:11}},
+          {text:String(row.t),options:{color:MT,align:'center',fontSize:11}},
+          {text:String(row.a),options:{color:MT,align:'center',fontSize:11}},
+          {text:row.p+'%',options:{color:pc,bold:true,align:'center',fontSize:12}},
+          {text:row.p>=50?'ممتاز':row.p>=30?'جيد':'تحسين',options:{color:pc,align:'center',rtlMode:true,fontSize:10}},
+        ]);
+      });
+      sr.addTable(tbl,{x:.3,y:.68,w:9.4,rowH:.36,fontSize:11,border:{type:'solid',color:'0ea5e9',pt:.4}});
+    }
+
+    // Per-branch detail slides
+    for(const b of targetBranches){
+      const br=reports.filter(r=>r.branch===b);
+      const t=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+      const a=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+      const p=t>0?((a/t)*100).toFixed(1):0;
+      const pc=parseFloat(p)>=50?GREEN:parseFloat(p)>=30?YELLOW:RED;
+      const sb=pptx.addSlide();sb.background={color:BG};
+      addHdr(sb,'تفاصيل فرع: '+b);
+      [['التقارير',String(br.length),BLUE],['الإجمالي',String(t),MT],['العربي',String(a),GREEN],['النسبة',p+'%',pc]]
+        .forEach(([l,v,col],i)=>{
+          const x=0.3+i*2.35;
+          sb.addShape(pptx.ShapeType.rect,{x,y:.68,w:2.15,h:1.1,fill:{color:DARK},line:{color:col,pt:.5}});
+          sb.addText(v,{x,y:.8,w:2.15,h:.5,fontSize:22,bold:true,color:col,align:'center'});
+          sb.addText(l,{x,y:1.35,w:2.15,h:.35,fontSize:10,color:MT,align:'center',rtlMode:true});
+        });
+      const f=Math.min(parseFloat(p),100)/100;
+      sb.addShape(pptx.ShapeType.rect,{x:.3,y:1.92,w:9.4,h:.18,fill:{color:'0a1628'},line:{color:BLUE,pt:.4}});
+      sb.addShape(pptx.ShapeType.rect,{x:.3,y:1.92,w:9.4*f,h:.18,fill:{color:pc}});
+      // Agents table
+      const bh=t2=>({text:t2,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:10}});
+      const btbl=[[bh('#'),bh('المندوب'),bh('الإجمالي'),bh('العربي'),bh('النسبة'),bh('التاريخ')]];
+      br.slice(0,8).forEach((r,i)=>{
+        const rp=parseFloat(r.pct)||0;const rc=rp>=50?GREEN:rp>=30?YELLOW:RED;
+        btbl.push([
+          {text:String(i+1),options:{color:MT,align:'center',fontSize:10}},
+          {text:r.agent||'—',options:{color:WH,rtlMode:true,fontSize:10}},
+          {text:String(r.total||0),options:{color:MT,align:'center',fontSize:10}},
+          {text:String(r.arabi||0),options:{color:MT,align:'center',fontSize:10}},
+          {text:(r.pct||0)+'%',options:{color:rc,bold:true,align:'center',fontSize:11}},
+          {text:(r.timestamp||'').slice(0,10),options:{color:MT,align:'center',fontSize:9}},
+        ]);
+      });
+      sb.addTable(btbl,{x:.3,y:2.2,w:9.4,rowH:.32,fontSize:10,border:{type:'solid',color:'0ea5e9',pt:.3}});
+      // Sections slide
+      const secs=calcSections(br);
+      if(secs.length){
+        const ss=pptx.addSlide();ss.background={color:BG};
+        addHdr(ss,'أقسام فرع: '+b);
+        const sh=t2=>({text:t2,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:11}});
+        const stbl=[[sh('القسم'),sh('الإجمالي'),sh('العربي'),sh('النسبة %'),sh('التقييم')]];
+        secs.forEach(s=>{
+          const sc2=parseFloat(s.p)>=50?GREEN:parseFloat(s.p)>=30?YELLOW:RED;
+          stbl.push([
+            {text:s.l,options:{color:WH,rtlMode:true,fontSize:11}},
+            {text:String(s.count),options:{color:MT,align:'center',fontSize:11}},
+            {text:String(s.arabi),options:{color:MT,align:'center',fontSize:11}},
+            {text:s.p+'%',options:{color:sc2,bold:true,align:'center',fontSize:12}},
+            {text:parseFloat(s.p)>=50?'ممتاز':parseFloat(s.p)>=30?'جيد':'تحسين',options:{color:sc2,align:'center',rtlMode:true,fontSize:10}},
+          ]);
+        });
+        ss.addTable(stbl,{x:.3,y:.68,w:9.4,rowH:.36,fontSize:11,border:{type:'solid',color:'0ea5e9',pt:.4}});
+      }
+    }
+    const fname=`الفروع${focusBranch?'_'+focusBranch:''}_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.pptx`;
+    await pptx.writeFile({fileName:fname});
+    showToast('✅ تم تحميل PowerPoint الفروع');
+  }catch(e){showToast('خطأ: '+e.message,'err');}
+  finally{setPPTLoading(false);}
+}
+
+// ══════════════════════════════════════════
+// PPT — تبويب الإحصائيات
+// ══════════════════════════════════════════
+async function exportPPTStatistics(){
+  if(!reports.length){showToast('لا توجد بيانات','err');return;}
+  const PptxCtor=window.PptxGenJS||window.pptxgen||window.PptxGen;
+  if(!PptxCtor){showToast('مكتبة PowerPoint لم تُحمَّل بعد','err');return;}
+  setPPTLoading(true);
+  try{
+    const pptx=new PptxCtor(); pptx.layout='LAYOUT_16x9';
+    const BG='060e1e',BLUE='0ea5e9',CYAN='67e8f9',WH='e0f2fe',MT='7dd3fc',GREEN='34d399',YELLOW='fbbf24',RED='f87171',DARK='0f2040';
+    const addHdr=(sl,t)=>{
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:.55,fill:{color:DARK}});
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:.55,w:'100%',h:.03,fill:{color:BLUE}});
+      sl.addText(t,{x:.35,y:.06,w:9.3,h:.43,fontSize:17,bold:true,color:CYAN,rtlMode:true});
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:5.57,w:'100%',h:.03,fill:{color:BLUE}});
+      sl.addText('نظام نسب عرض العربي | '+new Date().toLocaleDateString('ar-EG'),{x:.3,y:5.62,w:9.4,h:.25,fontSize:8,color:MT,rtlMode:true});
+    };
+    const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+    const totalP=reports.reduce((s,r)=>s+(Number(r.total)||0),0);
+    const totalA=reports.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+    const avg=totalP>0?((totalA/totalP)*100).toFixed(1):0;
+    const branchStats=branches.map(b=>{
+      const br=reports.filter(r=>r.branch===b);
+      const t=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+      const a=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+      const p=t>0?((a/t)*100).toFixed(1):0;
+      return{b,len:br.length,t,a,p:parseFloat(p)};
+    }).sort((x,y)=>y.p-x.p);
+
+    // Cover
+    const sc=pptx.addSlide();sc.background={color:BG};
+    sc.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:2,fill:{color:DARK}});
+    sc.addShape(pptx.ShapeType.rect,{x:0,y:2,w:'100%',h:.04,fill:{color:BLUE}});
+    sc.addText('📊',{x:4.3,y:.2,w:1.4,h:.9,fontSize:40,align:'center'});
+    sc.addText('الإحصائيات الشاملة',{x:.8,y:.95,w:8.4,h:.75,fontSize:26,bold:true,color:CYAN,align:'center',rtlMode:true});
+    [[reports.length,'تقرير',1.8],[branches.length,'فرع',4.3],[avg+'%','المتوسط',6.8]]
+      .forEach(([v,l,x])=>{sc.addText(String(v),{x,y:2.3,w:2,h:.5,fontSize:20,bold:true,color:CYAN,align:'center'});sc.addText(l,{x,y:2.8,w:2,h:.3,fontSize:10,color:MT,align:'center',rtlMode:true});});
+
+    // KPIs slide
+    const sk=pptx.addSlide();sk.background={color:BG};
+    addHdr(sk,'المؤشرات الرئيسية');
+    [[reports.length,'إجمالي التقارير',BLUE,'📋'],[totalP,'إجمالي المنتجات',GREEN,'📦'],[totalA,'منتجات العربي',YELLOW,'⭐'],[avg+'%','المتوسط العام',parseFloat(avg)>=50?GREEN:parseFloat(avg)>=30?YELLOW:RED,'📊']]
+      .forEach(([v,l,col,ic],i)=>{
+        const x=0.3+i*2.35;
+        sk.addShape(pptx.ShapeType.rect,{x,y:.68,w:2.15,h:2.1,fill:{color:DARK},line:{color:BLUE,pt:.5}});
+        sk.addShape(pptx.ShapeType.rect,{x,y:.68,w:2.15,h:.05,fill:{color:col}});
+        sk.addText(ic,{x,y:.8,w:2.15,h:.5,fontSize:24,align:'center'});
+        sk.addText(String(v),{x,y:1.35,w:2.15,h:.55,fontSize:22,bold:true,color:col,align:'center'});
+        sk.addText(l,{x,y:1.95,w:2.15,h:.4,fontSize:10,color:MT,align:'center',rtlMode:true});
+      });
+
+    // Ranking slide
+    const sr=pptx.addSlide();sr.background={color:BG};
+    addHdr(sr,'ترتيب الفروع حسب الأداء');
+    const h=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:11}});
+    const tbl=[[h('الترتيب'),h('الفرع'),h('التقارير'),h('الإجمالي'),h('العربي'),h('النسبة'),h('التقييم')]];
+    branchStats.forEach((row,i)=>{
+      const pc=row.p>=50?GREEN:row.p>=30?YELLOW:RED;
+      tbl.push([
+        {text:String(i+1),options:{color:MT,align:'center',fontSize:11}},
+        {text:(i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':'')+row.b,options:{color:WH,rtlMode:true,bold:true,fontSize:11}},
+        {text:String(row.len),options:{color:MT,align:'center',fontSize:11}},
+        {text:String(row.t),options:{color:MT,align:'center',fontSize:11}},
+        {text:String(row.a),options:{color:MT,align:'center',fontSize:11}},
+        {text:row.p+'%',options:{color:pc,bold:true,align:'center',fontSize:12}},
+        {text:row.p>=50?'ممتاز':row.p>=30?'جيد':'تحسين',options:{color:pc,align:'center',rtlMode:true,fontSize:10}},
+      ]);
+    });
+    sr.addTable(tbl,{x:.3,y:.68,w:9.4,rowH:.36,fontSize:11,border:{type:'solid',color:'0ea5e9',pt:.4}});
+
+    // Sections per branch
+    for(const b of branches){
+      const secs=calcSections(reports.filter(r=>r.branch===b));
+      if(!secs.length)continue;
+      const ss=pptx.addSlide();ss.background={color:BG};
+      addHdr(ss,'أقسام فرع: '+b);
+      const sh=t2=>({text:t2,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:11}});
+      const stbl=[[sh('القسم'),sh('الإجمالي'),sh('العربي'),sh('النسبة %'),sh('التقييم')]];
+      secs.forEach(s=>{
+        const sc2=parseFloat(s.p)>=50?GREEN:parseFloat(s.p)>=30?YELLOW:RED;
+        stbl.push([
+          {text:s.l,options:{color:WH,rtlMode:true,fontSize:11}},
+          {text:String(s.count),options:{color:MT,align:'center',fontSize:11}},
+          {text:String(s.arabi),options:{color:MT,align:'center',fontSize:11}},
+          {text:s.p+'%',options:{color:sc2,bold:true,align:'center',fontSize:12}},
+          {text:parseFloat(s.p)>=50?'ممتاز':parseFloat(s.p)>=30?'جيد':'تحسين',options:{color:sc2,align:'center',rtlMode:true,fontSize:10}},
+        ]);
+      });
+      ss.addTable(stbl,{x:.3,y:.68,w:9.4,rowH:.36,fontSize:11,border:{type:'solid',color:'0ea5e9',pt:.4}});
+    }
+
+    await pptx.writeFile({fileName:`الإحصائيات_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.pptx`});
+    showToast('✅ تم تحميل PowerPoint الإحصائيات');
+  }catch(e){showToast('خطأ: '+e.message,'err');}
+  finally{setPPTLoading(false);}
+}
+
+// ══════════════════════════════════════════
+// PPT — تبويب المقارنة
+// ══════════════════════════════════════════
+async function exportPPTComparison(){
+  if(!reports.length){showToast('لا توجد بيانات','err');return;}
+  const PptxCtor=window.PptxGenJS||window.pptxgen||window.PptxGen;
+  if(!PptxCtor){showToast('مكتبة PowerPoint لم تُحمَّل بعد','err');return;}
+  setPPTLoading(true);
+  try{
+    const pptx=new PptxCtor(); pptx.layout='LAYOUT_16x9';
+    const BG='060e1e',BLUE='0ea5e9',CYAN='67e8f9',WH='e0f2fe',MT='7dd3fc',GREEN='34d399',YELLOW='fbbf24',RED='f87171',DARK='0f2040',DARK2='071020';
+
+    // ─── Shared header ───
+    const addHdr=(sl,t,sub)=>{
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:.62,fill:{color:DARK}});
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:.62,w:'100%',h:.04,fill:{color:BLUE}});
+      sl.addText(t,{x:.35,y:.06,w:8.6,h:.38,fontSize:16,bold:true,color:CYAN,rtlMode:true});
+      if(sub) sl.addText(sub,{x:.35,y:.38,w:8.6,h:.22,fontSize:9,color:MT,rtlMode:true});
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:5.57,w:'100%',h:.03,fill:{color:BLUE}});
+      sl.addText('نظام نسب عرض العربي  |  تقرير المقارنة  |  '+new Date().toLocaleDateString('ar-EG'),
+        {x:.3,y:5.62,w:9.4,h:.25,fontSize:8,color:MT,rtlMode:true,align:'center'});
+    };
+
+    const allBranches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+    const selVal=document.getElementById('cmpBranchSel')?.value||'__ALL__';
+    const cmpBranches=(selVal==='__ALL__'
+      ? allBranches.filter(b=>reports.filter(r=>r.branch===b).length>=2)
+      : [selVal]).filter(b=>reports.filter(r=>r.branch===b).length>=2);
+
+    // Pre-compute stats for all branches
+    const allStats=cmpBranches.map(b=>{
+      const br=reports.filter(r=>r.branch===b);
+      br.sort((a,x)=>(a.createdAt?.seconds||0)-(x.createdAt?.seconds||0));
+      const first=br[0], last=br[br.length-1];
+      const pF=parseFloat(first?.pct)||0, pL=parseFloat(last?.pct)||0;
+      const d=+(pL-pF).toFixed(1);
+      const tAll=br.reduce((s,r)=>s+(Number(r.total)||0),0);
+      const aAll=br.reduce((s,r)=>s+(Number(r.arabi)||0),0);
+      const avg=tAll>0?+((aAll/tAll)*100).toFixed(1):0;
+      return{b,br,first,last,pF,pL,d,len:br.length,tAll,aAll,avg};
+    }).sort((a,x)=>x.d-a.d);
+
+    const improved=allStats.filter(s=>s.d>0).length;
+    const declined=allStats.filter(s=>s.d<0).length;
+    const stable=allStats.filter(s=>s.d===0).length;
+
+    // ════════════════════════════════════
+    // SLIDE 1: Cover — احترافي
+    // ════════════════════════════════════
+    const s0=pptx.addSlide();s0.background={color:BG};
+    // Dark top band
+    s0.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:2.6,fill:{color:DARK}});
+    s0.addShape(pptx.ShapeType.rect,{x:0,y:2.6,w:'100%',h:.05,fill:{color:BLUE}});
+    // Decorative left stripe
+    s0.addShape(pptx.ShapeType.rect,{x:0,y:0,w:.08,h:'100%',fill:{color:BLUE}});
+    // Emoji icon
+    s0.addText('🔄',{x:4.2,y:.18,w:1.6,h:1.0,fontSize:48,align:'center'});
+    // Main title
+    s0.addText('تقرير المقارنة الشامل',{x:.6,y:1.1,w:8.8,h:.72,fontSize:32,bold:true,color:CYAN,align:'center',rtlMode:true});
+    s0.addText('نسب عرض العربي — قبل وبعد',{x:.6,y:1.82,w:8.8,h:.45,fontSize:16,color:MT,align:'center',rtlMode:true});
+    // Stats row
+    s0.addShape(pptx.ShapeType.rect,{x:.4,y:2.85,w:9.2,h:1.4,fill:{color:DARK2},line:{color:BLUE,pt:.5}});
+    [
+      ['الفروع المقارَنة',String(cmpBranches.length),CYAN,.6],
+      ['فروع تحسّنت',String(improved),GREEN,2.95],
+      ['فروع تراجعت',String(declined),RED,5.3],
+      ['فروع ثابتة',String(stable),MT,7.65],
+    ].forEach(([l,v,col,x])=>{
+      s0.addText(v,{x,y:3.05,w:2.1,h:.55,fontSize:28,bold:true,color:col,align:'center'});
+      s0.addText(l,{x,y:3.65,w:2.1,h:.35,fontSize:10,color:MT,align:'center',rtlMode:true});
+    });
+    s0.addShape(pptx.ShapeType.rect,{x:0,y:5.57,w:'100%',h:.03,fill:{color:BLUE}});
+    s0.addText(new Date().toLocaleDateString('ar-EG')+'  |  نظام نسب عرض العربي',
+      {x:.3,y:5.62,w:9.4,h:.25,fontSize:9,color:MT,rtlMode:true,align:'center'});
+
+    // ════════════════════════════════════
+    // SLIDE 2: جدول ملخص المقارنة لكل الفروع
+    // ════════════════════════════════════
+    const s1=pptx.addSlide();s1.background={color:BG};
+    addHdr(s1,'ملخص المقارنة — ترتيب حسب التحسّن',`${cmpBranches.length} فرع | ${new Date().toLocaleDateString('ar-EG')}`);
+    const sh=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:10,align:'center'}});
+    const stbl=[[sh('الترتيب'),sh('الفرع'),sh('التقارير'),sh('قبل %'),sh('بعد %'),sh('التغيير'),sh('المتوسط'),sh('الحكم')]];
+    allStats.forEach((s,i)=>{
+      const dc=s.d>0?GREEN:s.d<0?RED:MT;
+      const cls=s.avg>=50?GREEN:s.avg>=30?YELLOW:RED;
+      const medal=i===0&&s.d>0?'🏆 ':i===1&&s.d>0?'🥈 ':i===2&&s.d>0?'🥉 ':'';
+      stbl.push([
+        {text:String(i+1),options:{color:MT,align:'center',fontSize:10}},
+        {text:medal+s.b,options:{color:WH,rtlMode:true,bold:true,fontSize:10}},
+        {text:String(s.len),options:{color:MT,align:'center',fontSize:10}},
+        {text:s.pF+'%',options:{color:RED,bold:true,align:'center',fontSize:11}},
+        {text:s.pL+'%',options:{color:GREEN,bold:true,align:'center',fontSize:11}},
+        {text:(s.d>0?'+':'')+s.d+'%',options:{color:dc,bold:true,align:'center',fontSize:12}},
+        {text:s.avg+'%',options:{color:cls,align:'center',fontSize:10}},
+        {text:s.d>0?'تحسّن ✅':s.d<0?'تراجع ❌':'ثابت ➡',options:{color:dc,align:'center',rtlMode:true,fontSize:10}},
+      ]);
+    });
+    s1.addTable(stbl,{x:.3,y:.72,w:9.4,rowH:.36,fontSize:10,border:{type:'solid',color:'0ea5e9',pt:.35},fill:{color:BG},color:WH});
+
+    // ════════════════════════════════════
+    // SLIDES 3+: شريحة مقارنة لكل فرع
+    // ════════════════════════════════════
+    for(const s of allStats){
+      const dc=s.d>0?GREEN:s.d<0?RED:MT;
+      const di=s.d>0?'📈':s.d<0?'📉':'➡️';
+      const pCol=s.avg>=50?GREEN:s.avg>=30?YELLOW:RED;
+
+      // ── شريحة المقارنة الرئيسية ──
+      const sl=pptx.addSlide();sl.background={color:BG};
+      addHdr(sl,'مقارنة فرع: '+s.b,`${s.len} تقارير  |  متوسط النسبة: ${s.avg}%`);
+
+      // Progress bar full width
+      const f=Math.min(s.avg,100)/100;
+      sl.addShape(pptx.ShapeType.rect,{x:.3,y:.72,w:9.4,h:.16,fill:{color:DARK2},line:{color:BLUE,pt:.3}});
+      sl.addShape(pptx.ShapeType.rect,{x:.3,y:.72,w:9.4*f,h:.16,fill:{color:pCol}});
+
+      // قبل card
+      sl.addShape(pptx.ShapeType.rect,{x:.3,y:1.02,w:3.5,h:2.1,fill:{color:DARK},line:{color:RED,pt:1.2}});
+      sl.addShape(pptx.ShapeType.rect,{x:.3,y:1.02,w:3.5,h:.07,fill:{color:RED}});
+      sl.addText('📅  قبل',{x:.3,y:1.14,w:3.5,h:.32,fontSize:11,bold:true,color:RED,align:'center',rtlMode:true});
+      sl.addText(s.pF+'%',{x:.3,y:1.44,w:3.5,h:.82,fontSize:42,bold:true,color:RED,align:'center'});
+      sl.addText(s.first.agent||'—',{x:.3,y:2.28,w:3.5,h:.3,fontSize:11,color:MT,align:'center',rtlMode:true});
+      sl.addText((s.first.timestamp||'').slice(0,10),{x:.3,y:2.58,w:3.5,h:.25,fontSize:9,color:MT,align:'center'});
+      sl.addText('إجمالي: '+s.first.total+'  |  عربي: '+s.first.arabi,{x:.3,y:2.84,w:3.5,h:.24,fontSize:9,color:MT,align:'center',rtlMode:true});
+
+      // Delta box center
+      sl.addShape(pptx.ShapeType.rect,{x:4.05,y:1.45,w:1.9,h:1.3,fill:{color:DARK},line:{color:dc,pt:1.5}});
+      sl.addText(di,{x:4.05,y:1.48,w:1.9,h:.5,fontSize:26,align:'center'});
+      sl.addText((s.d>0?'+':'')+s.d+'%',{x:4.05,y:1.95,w:1.9,h:.44,fontSize:20,bold:true,color:dc,align:'center'});
+      sl.addText(s.d>0?'تحسّن':s.d<0?'تراجع':'ثابت',{x:4.05,y:2.4,w:1.9,h:.28,fontSize:10,color:dc,align:'center',rtlMode:true});
+
+      // بعد card
+      sl.addShape(pptx.ShapeType.rect,{x:6.2,y:1.02,w:3.5,h:2.1,fill:{color:DARK},line:{color:GREEN,pt:1.2}});
+      sl.addShape(pptx.ShapeType.rect,{x:6.2,y:1.02,w:3.5,h:.07,fill:{color:GREEN}});
+      sl.addText('✅  بعد',{x:6.2,y:1.14,w:3.5,h:.32,fontSize:11,bold:true,color:GREEN,align:'center',rtlMode:true});
+      sl.addText(s.pL+'%',{x:6.2,y:1.44,w:3.5,h:.82,fontSize:42,bold:true,color:GREEN,align:'center'});
+      sl.addText(s.last.agent||'—',{x:6.2,y:2.28,w:3.5,h:.3,fontSize:11,color:MT,align:'center',rtlMode:true});
+      sl.addText((s.last.timestamp||'').slice(0,10),{x:6.2,y:2.58,w:3.5,h:.25,fontSize:9,color:MT,align:'center'});
+      sl.addText('إجمالي: '+s.last.total+'  |  عربي: '+s.last.arabi,{x:6.2,y:2.84,w:3.5,h:.24,fontSize:9,color:MT,align:'center',rtlMode:true});
+
+      // Insight banner
+      const insightBg=s.d>0?'0a2e1a':s.d<0?'2e0a0a':'0a1a2e';
+      sl.addShape(pptx.ShapeType.rect,{x:.3,y:3.24,w:9.4,h:.55,fill:{color:insightBg},line:{color:dc,pt:.5}});
+      const insightTxt=s.d>0?`تحسّن بمقدار +${s.d}% — الأداء في ارتفاع مستمر`:
+                       s.d<0?`تراجع بمقدار ${s.d}% — يُنصح بمراجعة الفرع واتخاذ إجراءات تصحيحية`:
+                       'النسبة ثابتة دون تغيير — راجع الأقسام الضعيفة';
+      sl.addText(insightTxt,{x:.5,y:3.32,w:9.0,h:.38,fontSize:11,bold:true,color:dc,rtlMode:true,align:'center'});
+
+      // Timeline mini table
+      const th=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:9,align:'center'}});
+      const ttbl=[[th('#'),th('المندوب'),th('النسبة %'),th('الإجمالي'),th('العربي'),th('التغيير'),th('التاريخ')]];
+      s.br.forEach((r,i)=>{
+        const pp=parseFloat(r.pct)||0;
+        const prev=i>0?parseFloat(s.br[i-1].pct)||0:null;
+        const chg=prev!==null?+(pp-prev).toFixed(1):null;
+        const rc=pp>=50?GREEN:pp>=30?YELLOW:RED;
+        const cc=chg===null?MT:chg>0?GREEN:chg<0?RED:MT;
+        ttbl.push([
+          {text:String(i+1),options:{color:MT,align:'center',fontSize:9}},
+          {text:r.agent||'—',options:{color:WH,rtlMode:true,fontSize:9}},
+          {text:pp+'%',options:{color:rc,bold:true,align:'center',fontSize:10}},
+          {text:String(r.total||0),options:{color:MT,align:'center',fontSize:9}},
+          {text:String(r.arabi||0),options:{color:MT,align:'center',fontSize:9}},
+          {text:chg===null?'—':(chg>0?'+':'')+chg+'%',options:{color:cc,bold:true,align:'center',fontSize:9}},
+          {text:(r.timestamp||'').slice(0,10),options:{color:MT,align:'center',fontSize:8}},
+        ]);
+      });
+      sl.addTable(ttbl,{x:.3,y:3.88,w:9.4,rowH:.28,fontSize:9,border:{type:'solid',color:'0ea5e9',pt:.28}});
+
+      // ── شريحة مقارنة الأقسام ──
+      const secsF=s.first.sections||[], secsL=s.last.sections||[];
+      const allLbls=[...new Set([...secsF.map(x=>x.label),...secsL.map(x=>x.label)])];
+      if(allLbls.length){
+        const ss=pptx.addSlide();ss.background={color:BG};
+        addHdr(ss,'مقارنة أقسام فرع: '+s.b,'أول تقرير مقابل آخر تقرير');
+        const sh2=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:11,align:'center'}});
+        const secTbl=[[sh2('القسم'),sh2('إجمالي قبل'),sh2('عربي قبل'),sh2('نسبة قبل %'),sh2('نسبة بعد %'),sh2('الفرق'),sh2('الاتجاه')]];
+        allLbls.forEach(lbl=>{
+          const sf=secsF.find(x=>x.label===lbl)||{count:0,arabi:0};
+          const sl2=secsL.find(x=>x.label===lbl)||{count:0,arabi:0};
+          const pf=sf.count>0?+((sf.arabi/sf.count)*100).toFixed(1):0;
+          const pl=sl2.count>0?+((sl2.arabi/sl2.count)*100).toFixed(1):0;
+          const dd=+(pl-pf).toFixed(1);
+          const ddC=dd>0?GREEN:dd<0?RED:MT;
+          secTbl.push([
+            {text:lbl,options:{color:WH,rtlMode:true,fontSize:11,bold:true}},
+            {text:String(sf.count),options:{color:MT,align:'center',fontSize:10}},
+            {text:String(sf.arabi),options:{color:MT,align:'center',fontSize:10}},
+            {text:pf+'%',options:{color:RED,bold:true,align:'center',fontSize:11}},
+            {text:pl+'%',options:{color:GREEN,bold:true,align:'center',fontSize:11}},
+            {text:(dd>0?'+':'')+dd+'%',options:{color:ddC,bold:true,align:'center',fontSize:12}},
+            {text:dd>0?'تحسّن ↑':dd<0?'تراجع ↓':'ثابت ➡',options:{color:ddC,align:'center',rtlMode:true,fontSize:10}},
+          ]);
+        });
+        ss.addTable(secTbl,{x:.3,y:.76,w:9.4,rowH:.38,fontSize:10,border:{type:'solid',color:'0ea5e9',pt:.38},fill:{color:BG},color:WH});
+      }
+    }
+
+    // ════════════════════════════════════
+    // SLIDE FINAL: شريحة الخاتمة
+    // ════════════════════════════════════
+    const sf=pptx.addSlide();sf.background={color:BG};
+    sf.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:2.3,fill:{color:DARK}});
+    sf.addShape(pptx.ShapeType.rect,{x:0,y:2.3,w:'100%',h:.05,fill:{color:BLUE}});
+    sf.addShape(pptx.ShapeType.rect,{x:0,y:0,w:.08,h:'100%',fill:{color:BLUE}});
+    sf.addText('✅',{x:4.2,y:.2,w:1.6,h:.9,fontSize:44,align:'center'});
+    sf.addText('شكراً لاهتمامكم',{x:.6,y:1.05,w:8.8,h:.72,fontSize:30,bold:true,color:CYAN,align:'center',rtlMode:true});
+    sf.addText('نظام نسب عرض العربي — تقرير المقارنة الشامل',{x:.6,y:2.5,w:8.8,h:.48,fontSize:14,color:MT,align:'center',rtlMode:true});
+    sf.addShape(pptx.ShapeType.rect,{x:1.2,y:3.1,w:7.6,h:.96,fill:{color:DARK2},line:{color:BLUE,pt:.8}});
+    [
+      ['الفروع',String(cmpBranches.length),CYAN,1.4],
+      ['تحسّن',String(improved),GREEN,3.0],
+      ['تراجع',String(declined),RED,4.6],
+      ['ثابت',String(stable),MT,6.2],
+    ].forEach(([l,v,col,x])=>{
+      sf.addText(v,{x,y:3.18,w:1.5,h:.4,fontSize:22,bold:true,color:col,align:'center'});
+      sf.addText(l,{x,y:3.6,w:1.5,h:.3,fontSize:10,color:MT,align:'center',rtlMode:true});
+    });
+    sf.addShape(pptx.ShapeType.rect,{x:0,y:5.57,w:'100%',h:.03,fill:{color:BLUE}});
+    sf.addText(new Date().toLocaleDateString('ar-EG')+'  |  نظام نسب عرض العربي',
+      {x:.3,y:5.62,w:9.4,h:.25,fontSize:9,color:MT,rtlMode:true,align:'center'});
+
+    const fname=`المقارنة_الشاملة_${selVal==='__ALL__'?'كل_الفروع':selVal}_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.pptx`;
+    await pptx.writeFile({fileName:fname});
+    showToast(`✅ تم تحميل PowerPoint المقارنة (${pptx.slides?.length} شرائح)`);
+  }catch(e){console.error(e);showToast('خطأ: '+e.message,'err');}
+  finally{setPPTLoading(false);}
+}
+
+// Helper — PPT loading state
+function setPPTLoading(on){
+  const btn=document.getElementById('pptBtn');
+  const lbl=document.getElementById('pptBtnLabel');
+  if(on){btn.classList.add('loading');if(lbl)lbl.textContent='⏳ جاري الإنشاء...';}
+  else{btn.classList.remove('loading');updateExportButtons(currentPage);}
+}
+
+// ══════════════════════════════════════════
+// Sidebar Mobile
+// ══════════════════════════════════════════
+function openSb(){document.getElementById('sidebar').classList.add('open');document.getElementById('sbOverlay').classList.add('show');}
+function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sbOverlay').classList.remove('show');}
+
+
+// ══════════════════════════════════════════
+// Auth — Logout
+// ══════════════════════════════════════════
+function lsLogout(){
+  if(!confirm('هل تريد تسجيل الخروج؟')) return;
+  localStorage.removeItem('arabi_auth_session');
+  // Show login screen
+  const ls=document.getElementById('loginScreen');
+  if(ls){
+    ls.style.display='flex';
+    document.getElementById('lsEmail').value='';
+    document.getElementById('lsPass').value='';
+    document.getElementById('lsAlert').style.display='none';
+    document.getElementById('lsEmailErr').style.display='none';
+    document.getElementById('lsPassErr').style.display='none';
+  }
+  showToast('👋 تم تسجيل الخروج');
+}
+
+// ══════════════════════════════════════════
+// Start
+// ══════════════════════════════════════════
+initFirebase();
+</script>
+</body>
+</html>
