@@ -1,0 +1,2189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>لوحة تحكم — نظام نسب عرض العربي</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<style>
+/* ════════════════════════════════════════════
+   ROOT VARIABLES
+════════════════════════════════════════════ */
+:root{
+  --p:#0ea5e9;--pd:#0284c7;--pl:#38bdf8;
+  --ac:#06b6d4;--ac2:#67e8f9;
+  --bg:#0a1628;--dark:#0d1f3a;--dark2:#0f2545;
+  --glass:rgba(14,165,233,.08);--gb:rgba(14,165,233,.22);--gs:rgba(14,165,233,.12);
+  --tx:#e0f2fe;--tm:#7dd3fc;
+  --glow:0 0 24px rgba(14,165,233,.22);
+  --r:14px;--rs:10px;
+  --nav:64px;--tabs:52px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Cairo','Tajawal',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+
+/* BACKGROUND */
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 70% 55% at 10% 15%,rgba(6,182,212,.13) 0%,transparent 60%),
+             radial-gradient(ellipse 55% 65% at 90% 85%,rgba(14,165,233,.1) 0%,transparent 55%),
+             linear-gradient(160deg,#0a1628 0%,#0c1e38 50%,#081422 100%)}
+.bg-grid::after{content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(14,165,233,.03) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(14,165,233,.03) 1px,transparent 1px);
+  background-size:50px 50px}
+
+/* ════════════════════════════════════════════
+   NAVBAR — REDESIGNED
+════════════════════════════════════════════ */
+.nav{
+  position:fixed;top:0;right:0;left:0;z-index:200;
+  height:var(--nav);
+  background:rgba(8,18,34,.95);
+  border-bottom:1px solid rgba(14,165,233,.18);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;gap:10px;
+  box-shadow:0 2px 20px rgba(0,0,0,.4)
+}
+.nav-brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.nav-brand .ico{font-size:24px;filter:drop-shadow(0 0 10px var(--p))}
+.nav-brand h1{font-size:clamp(13px,2vw,17px);font-weight:900;
+  background:linear-gradient(135deg,var(--ac2),var(--p));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2}
+.nav-brand p{font-size:10px;color:var(--tm)}
+.nav-status{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+  background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.18);
+  border-radius:20px;padding:4px 10px;flex-shrink:0}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#6b7280;flex-shrink:0;transition:background .4s}
+.status-dot.live{background:#10b981;box-shadow:0 0 6px #10b981;animation:sdp 2s infinite}
+@keyframes sdp{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── NAV ACTIONS ── */
+.nav-actions{display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
+.nbtn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:7px 14px;border-radius:8px;
+  font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;
+  cursor:pointer;border:none;white-space:nowrap;text-decoration:none;
+  transition:transform .18s,opacity .18s,box-shadow .18s;
+  position:relative;overflow:hidden;
+}
+.nbtn:hover{transform:translateY(-2px)}
+.nbtn:active{transform:scale(.96)}
+.nbtn.new-report{
+  background:transparent;color:var(--ac2);
+  border:1px solid rgba(14,165,233,.35);
+}
+.nbtn.new-report:hover{background:rgba(14,165,233,.12)}
+.nbtn.excel{
+  background:linear-gradient(135deg,#064e3b,#059669);
+  color:#fff;
+  box-shadow:0 3px 12px rgba(5,150,105,.3);
+}
+.nbtn.excel:hover{box-shadow:0 6px 18px rgba(5,150,105,.45)}
+.nbtn.ppt-all{
+  background:linear-gradient(135deg,#1e3a8a,#3b82f6);
+  color:#fff;
+  box-shadow:0 3px 12px rgba(59,130,246,.3);
+}
+.nbtn.ppt-all:hover{box-shadow:0 6px 18px rgba(59,130,246,.45)}
+.nbtn.ppt-branch{
+  background:linear-gradient(135deg,#4c1d95,#7c3aed);
+  color:#fff;
+  box-shadow:0 3px 12px rgba(124,58,237,.3);
+}
+.nbtn.ppt-branch:hover{box-shadow:0 6px 18px rgba(124,58,237,.45)}
+.nbtn.logout{
+  background:transparent;color:#f87171;
+  border:1px solid rgba(239,68,68,.3);
+}
+.nbtn.logout:hover{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.5)}
+.nbtn:disabled,.nbtn.loading{opacity:.55;pointer-events:none}
+.nbtn.loading .btn-ico::after{
+  content:'';display:inline-block;width:11px;height:11px;
+  border:2px solid rgba(255,255,255,.35);border-top-color:#fff;
+  border-radius:50%;animation:spin .6s linear infinite;margin-right:4px;
+  vertical-align:middle;
+}
+.btn-ico{display:flex;align-items:center;gap:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ════════════════════════════════════════════
+   TABS — REDESIGNED PILLS
+════════════════════════════════════════════ */
+.tabs-bar{
+  position:fixed;top:var(--nav);right:0;left:0;z-index:150;
+  height:var(--tabs);
+  background:rgba(8,18,34,.9);
+  border-bottom:1px solid rgba(14,165,233,.12);
+  backdrop-filter:blur(20px);
+  display:flex;align-items:center;gap:4px;padding:0 16px;
+  overflow-x:auto;scrollbar-width:none
+}
+.tabs-bar::-webkit-scrollbar{display:none}
+.tab{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 16px;border-radius:8px;
+  font-size:12px;font-weight:700;
+  color:rgba(125,211,252,.6);cursor:pointer;white-space:nowrap;
+  border:1px solid transparent;
+  transition:all .22s cubic-bezier(.4,0,.2,1);
+  position:relative;
+}
+.tab:hover{color:var(--ac2);background:rgba(14,165,233,.08)}
+.tab.active{
+  color:var(--dark);
+  background:linear-gradient(135deg,var(--ac2),var(--p));
+  border-color:transparent;
+  box-shadow:0 2px 12px rgba(14,165,233,.35);
+}
+.tab .tab-count{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;border-radius:9px;
+  font-size:10px;font-weight:900;padding:0 4px;
+  background:rgba(14,165,233,.2);color:var(--ac2);
+  transition:all .22s;
+}
+.tab.active .tab-count{background:rgba(10,22,40,.25);color:var(--dark)}
+.tabs-body{position:relative;z-index:1;padding-top:calc(var(--nav) + var(--tabs));min-height:100vh}
+.tab-pane{display:none;padding:22px clamp(12px,3vw,28px) 80px;max-width:1320px;margin:0 auto;animation:fadeIn .35s ease}
+.tab-pane.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ════════════════════════════════════════════
+   KPI CARDS
+════════════════════════════════════════════ */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:12px;margin-bottom:24px}
+.kpi-card{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:18px 14px;position:relative;overflow:hidden;text-align:center;transition:transform .2s,box-shadow .2s}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--p),var(--ac2))}
+.kpi-card.green::before{background:linear-gradient(90deg,#059669,#34d399)}
+.kpi-card.red::before{background:linear-gradient(90deg,#dc2626,#f87171)}
+.kpi-card.purple::before{background:linear-gradient(90deg,#7c3aed,#a78bfa)}
+.kpi-card.yellow::before{background:linear-gradient(90deg,#d97706,#fbbf24)}
+.kpi-card:hover{transform:translateY(-3px);box-shadow:var(--glow)}
+.kpi-icon{font-size:26px;margin-bottom:5px;display:block}
+.kpi-val{font-size:clamp(22px,3.5vw,34px);font-weight:900;line-height:1;margin-bottom:4px;color:var(--ac2)}
+.kpi-lbl{font-size:10px;color:var(--tm);font-weight:600}
+.kpi-card.green .kpi-val{color:#34d399}
+.kpi-card.red .kpi-val{color:#f87171}
+.kpi-card.purple .kpi-val{color:#a78bfa}
+.kpi-card.yellow .kpi-val{color:#fbbf24}
+
+/* ════════════════════════════════════════════
+   CHARTS
+════════════════════════════════════════════ */
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:18px;margin-bottom:24px}
+.chart-card{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:16px;overflow:hidden}
+.chart-card.wide{grid-column:1/-1}
+.chart-title{font-size:12px;font-weight:700;color:var(--ac2);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.chart-wrap{position:relative;height:210px}
+.chart-wrap.tall{height:280px}
+
+/* ════════════════════════════════════════════
+   SECTION HEADERS & TABLES
+════════════════════════════════════════════ */
+.sec-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.sec-header h2{font-size:clamp(14px,2.5vw,17px);font-weight:700;color:var(--ac2);display:flex;align-items:center;gap:7px}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--gb);border-radius:var(--r);background:var(--glass);margin-bottom:22px}
+table.dt{width:100%;border-collapse:collapse;font-size:13px;min-width:580px}
+table.dt th{background:rgba(14,165,233,.12);color:var(--tm);font-weight:700;padding:11px 12px;text-align:center;border-bottom:1px solid var(--gb);white-space:nowrap;font-size:11px}
+table.dt th:first-child{text-align:right}
+table.dt td{padding:9px 12px;border-bottom:1px solid rgba(14,165,233,.06);text-align:center;vertical-align:middle}
+table.dt td:first-child{text-align:right}
+table.dt tr:last-child td{border-bottom:none}
+table.dt tr:hover td{background:rgba(14,165,233,.04)}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.badge.g{background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.22)}
+.badge.y{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.22)}
+.badge.r{background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.22)}
+.badge.b{background:rgba(14,165,233,.12);color:var(--pl);border:1px solid rgba(14,165,233,.22)}
+.pbar{display:flex;align-items:center;gap:6px;justify-content:center}
+.pbar-track{flex:1;min-width:55px;height:6px;background:rgba(14,165,233,.1);border-radius:10px;overflow:hidden}
+.pbar-fill{height:100%;border-radius:10px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.green-fill{background:linear-gradient(90deg,#059669,#34d399)}
+.yellow-fill{background:linear-gradient(90deg,#d97706,#fbbf24)}
+.red-fill{background:linear-gradient(90deg,#dc2626,#f87171)}
+.blue-fill{background:linear-gradient(90deg,var(--pd),var(--ac2))}
+
+/* ════════════════════════════════════════════
+   FILTER BAR
+════════════════════════════════════════════ */
+.filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:20px;background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:12px 16px}
+.filter-bar label{font-size:11px;font-weight:700;color:var(--tm);white-space:nowrap}
+.filter-select,.filter-input{background:rgba(14,165,233,.07);border:1px solid var(--gb);border-radius:7px;color:var(--tx);font-family:'Cairo',sans-serif;font-size:12px;padding:7px 11px;outline:none;transition:border-color .2s}
+.filter-select:focus,.filter-input:focus{border-color:var(--p)}
+.filter-select option{background:#0f2040}
+.filter-btn{padding:7px 14px;background:transparent;border:1px solid rgba(14,165,233,.35);border-radius:7px;color:var(--pl);font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:background .2s}
+.filter-btn:hover{background:rgba(14,165,233,.12)}
+
+/* ════════════════════════════════════════════
+   BRANCH CARDS
+════════════════════════════════════════════ */
+.branches-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px;margin-bottom:24px}
+.branch-card{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:18px;transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden}
+.branch-card:hover{transform:translateY(-3px);box-shadow:var(--glow)}
+.branch-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--p),var(--ac2))}
+.branch-name{font-size:14px;font-weight:700;color:var(--ac2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.branch-metas{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+.branch-meta{text-align:center;background:rgba(14,165,233,.06);border-radius:var(--rs);padding:7px}
+.branch-meta .m-val{font-size:17px;font-weight:900;color:var(--pl)}
+.branch-meta .m-lbl{font-size:9px;color:var(--tm)}
+.branch-pct-row{display:flex;align-items:center;gap:8px}
+.branch-pct-num{font-size:22px;font-weight:900;min-width:52px}
+.branch-pct-bar{flex:1;height:7px;background:rgba(14,165,233,.1);border-radius:10px;overflow:hidden}
+.branch-pct-fill{height:100%;border-radius:10px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.branch-reports{font-size:10px;color:var(--tm);margin-top:7px}
+.branch-trend{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;margin-top:4px}
+.branch-actions{display:flex;gap:6px;margin-top:12px}
+
+/* ════════════════════════════════════════════
+   SECTIONS
+════════════════════════════════════════════ */
+.sections-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:24px}
+.sec-card{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:16px;text-align:center;position:relative;overflow:hidden;transition:transform .2s}
+.sec-card:hover{transform:translateY(-3px);box-shadow:var(--glow)}
+.sec-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.sec-card.g::before{background:linear-gradient(90deg,#059669,#34d399)}
+.sec-card.y::before{background:linear-gradient(90deg,#d97706,#fbbf24)}
+.sec-card.r::before{background:linear-gradient(90deg,#dc2626,#f87171)}
+.sec-icon{font-size:30px;margin-bottom:5px;display:block}
+.sec-name{font-size:13px;font-weight:700;color:var(--pl);margin-bottom:8px}
+.sec-big-pct{font-size:32px;font-weight:900;line-height:1;margin-bottom:5px}
+.sec-card.g .sec-big-pct{color:#34d399}
+.sec-card.y .sec-big-pct{color:#fbbf24}
+.sec-card.r .sec-big-pct{color:#f87171}
+.sec-stats{display:flex;justify-content:center;gap:12px;font-size:10px;color:var(--tm);flex-wrap:wrap}
+.sec-stats span{font-weight:600}
+
+/* ════════════════════════════════════════════
+   BEFORE/AFTER TABLE
+════════════════════════════════════════════ */
+.ba-thead-before{background:rgba(248,113,113,.1)!important;color:#f87171!important}
+.ba-thead-after{background:rgba(52,211,153,.1)!important;color:#34d399!important}
+
+/* ════════════════════════════════════════════
+   COMPARISON PAGE
+════════════════════════════════════════════ */
+.cmp-hero{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:20px;background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:18px}
+@media(max-width:600px){.cmp-hero{grid-template-columns:1fr;text-align:center}}
+.cmp-side{padding:12px;border-radius:var(--rs);text-align:center}
+.cmp-side.before{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2)}
+.cmp-side.after{background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2)}
+.cmp-side-tag{font-size:9px;font-weight:700;margin-bottom:4px}
+.cmp-side.before .cmp-side-tag{color:#f87171}
+.cmp-side.after .cmp-side-tag{color:#34d399}
+.cmp-side-title{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:3px}
+.cmp-side-date{font-size:9px;color:var(--tm);margin-bottom:7px}
+.cmp-big-pct{font-size:40px;font-weight:900;line-height:1;margin-bottom:8px}
+.cmp-side.before .cmp-big-pct{color:#f87171}
+.cmp-side.after .cmp-big-pct{color:#34d399}
+.cmp-meta-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.cmp-meta{text-align:center}
+.cmp-meta-v{font-size:15px;font-weight:700;color:var(--tx)}
+.cmp-meta-l{font-size:9px;color:var(--tm)}
+.cmp-arrow{display:flex;flex-direction:column;align-items:center;gap:7px}
+.cmp-delta-arrow{font-size:26px}
+.cmp-delta-box{text-align:center}
+.cmp-delta-val{font-size:20px;font-weight:900}
+.cmp-delta-lbl{font-size:10px;color:var(--tm)}
+.cmp-chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+@media(max-width:700px){.cmp-chart-row{grid-template-columns:1fr}}
+.cmp-sec-card{background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:16px}
+.cmp-sec-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(14,165,233,.06)}
+.cmp-sec-row:last-child{border-bottom:none}
+.cmp-sec-name{min-width:90px;font-size:12px;font-weight:700;color:var(--pl)}
+.cmp-sec-bars{flex:1;display:flex;flex-direction:column;gap:3px}
+.cmp-bar-row{display:flex;align-items:center;gap:5px}
+.cmp-bar-label{font-size:9px;font-weight:700;min-width:16px}
+.cmp-bar-track{flex:1;height:7px;background:rgba(14,165,233,.1);border-radius:10px;overflow:hidden}
+.cmp-bar-fill-b{height:100%;background:linear-gradient(90deg,#dc2626,#f87171);border-radius:10px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.cmp-bar-fill-a{height:100%;background:linear-gradient(90deg,#059669,#34d399);border-radius:10px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.cmp-sec-delta{min-width:50px;font-size:13px;font-weight:900;text-align:center}
+.cmp-timeline{display:flex;flex-direction:column;gap:7px;margin-top:7px}
+.cmp-tl-row{display:flex;align-items:center;gap:10px;padding:9px 12px}
+.cmp-tl-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.cmp-tl-info{flex:1;min-width:0}
+.cmp-tl-agent{font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmp-tl-date{font-size:9px;color:var(--tm)}
+.cmp-tl-pct{font-size:17px;font-weight:900;min-width:50px;text-align:center}
+.cmp-tl-change{font-size:11px;font-weight:700;min-width:42px;text-align:center}
+
+/* ════════════════════════════════════════════
+   INSIGHT BANNER
+════════════════════════════════════════════ */
+.insight-banner{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--r);margin-bottom:18px;border:1px solid;flex-wrap:wrap}
+.insight-banner.green{background:rgba(52,211,153,.07);border-color:rgba(52,211,153,.22)}
+.insight-banner.yellow{background:rgba(251,191,36,.07);border-color:rgba(251,191,36,.22)}
+.insight-banner.red{background:rgba(248,113,113,.07);border-color:rgba(248,113,113,.22)}
+.insight-banner .ib-ico{font-size:22px}
+.insight-banner .ib-txt{flex:1}
+.insight-banner .ib-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.insight-banner .ib-sub{font-size:10px;color:var(--tm)}
+
+/* ════════════════════════════════════════════
+   MISC
+════════════════════════════════════════════ */
+.no-data{text-align:center;padding:60px 20px}
+.no-data .nd-ico{font-size:60px;margin-bottom:12px;display:block;opacity:.5}
+.no-data h3{font-size:17px;font-weight:700;color:var(--tm);margin-bottom:5px}
+.no-data p{font-size:12px;color:rgba(125,211,252,.6);max-width:300px;margin:0 auto 18px}
+.add-report-link{display:inline-flex;align-items:center;gap:7px;padding:11px 26px;background:linear-gradient(135deg,var(--pd),var(--ac));border-radius:50px;color:#fff;text-decoration:none;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;box-shadow:0 5px 18px rgba(14,165,233,.3);transition:opacity .2s,transform .2s}
+.add-report-link:hover{opacity:.9;transform:translateY(-2px)}
+.page-title{margin-bottom:20px}
+.page-title h2{font-size:clamp(15px,2.5vw,20px);font-weight:700;color:var(--ac2);display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.page-title p{font-size:11px;color:var(--tm)}
+.report-dot{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:11px;font-weight:700;flex-shrink:0}
+.tag{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:12px;font-size:10px;font-weight:700;background:rgba(14,165,233,.12);color:var(--pl);border:1px solid rgba(14,165,233,.22)}
+.tag.new{background:rgba(52,211,153,.12);color:#34d399;border-color:rgba(52,211,153,.22)}
+.tag.ba{background:rgba(167,139,250,.12);color:#a78bfa;border-color:rgba(167,139,250,.22)}
+
+/* ── Action buttons inside tables/cards ── */
+.act-btn{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:5px 10px;border-radius:6px;
+  font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;
+  cursor:pointer;border:1px solid transparent;
+  transition:background .18s,transform .15s;
+}
+.act-btn:hover{transform:translateY(-1px)}
+.act-btn.del{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.25);color:#fca5a5}
+.act-btn.del:hover{background:rgba(239,68,68,.2)}
+.act-btn.ppt{background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.3);color:#c4b5fd}
+.act-btn.ppt:hover{background:rgba(124,58,237,.22)}
+.act-btn.view{background:rgba(14,165,233,.1);border-color:rgba(14,165,233,.25);color:var(--pl)}
+.act-btn.view:hover{background:rgba(14,165,233,.2)}
+
+/* ════════════════════════════════════════════
+   MODAL
+════════════════════════════════════════════ */
+.modal-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(5,12,25,.75);
+  backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;
+  animation:fadeIn .2s ease;
+}
+.modal-overlay.hidden{display:none}
+.modal-box{
+  width:100%;max-width:560px;
+  background:linear-gradient(160deg,#0d1f3a,#0c1e38);
+  border:1px solid var(--gb);border-radius:var(--r);
+  padding:28px 24px;
+  box-shadow:0 32px 80px rgba(0,0,0,.6),var(--glow);
+  max-height:90vh;overflow-y:auto;
+}
+.modal-box.wide{max-width:720px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-head h3{font-size:16px;font-weight:700;color:var(--ac2);display:flex;align-items:center;gap:8px}
+.modal-close{background:rgba(14,165,233,.1);border:1px solid var(--gb);border-radius:8px;color:var(--tm);padding:5px 10px;cursor:pointer;font-size:13px;font-family:'Cairo',sans-serif;transition:background .2s}
+.modal-close:hover{background:rgba(239,68,68,.15);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+.modal-field{margin-bottom:14px}
+.modal-field label{display:block;font-size:11px;font-weight:700;color:var(--tm);margin-bottom:5px}
+.modal-select{width:100%;padding:10px 13px;background:rgba(14,165,233,.07);border:1px solid var(--gb);border-radius:var(--rs);color:var(--tx);font-family:'Cairo',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
+.modal-select:focus{border-color:var(--p)}
+.modal-select option{background:#0f2040}
+.modal-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.modal-btn{flex:1;padding:12px;border-radius:var(--rs);font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border:none;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s,transform .18s}
+.modal-btn:hover:not(:disabled){opacity:.9;transform:translateY(-1px)}
+.modal-btn:disabled{opacity:.5;cursor:not-allowed}
+.modal-btn.confirm{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;box-shadow:0 5px 18px rgba(124,58,237,.3)}
+.modal-btn.cancel{background:rgba(14,165,233,.1);border:1px solid var(--gb);color:var(--tm)}
+.modal-btn.danger{background:linear-gradient(135deg,#7f1d1d,#ef4444);color:#fff;box-shadow:0 5px 18px rgba(239,68,68,.3)}
+.branch-preview-card{background:rgba(14,165,233,.05);border:1px solid var(--gb);border-radius:var(--rs);padding:14px;margin-top:14px;display:none}
+.branch-preview-card.show{display:block}
+.bpc-stat{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(14,165,233,.07);font-size:12px}
+.bpc-stat:last-child{border-bottom:none}
+.bpc-lbl{color:var(--tm)}
+.bpc-val{font-weight:700;color:var(--tx)}
+
+/* ════════════════════════════════════════════
+   CONFIRM DELETE DIALOG
+════════════════════════════════════════════ */
+.del-confirm-ico{font-size:48px;text-align:center;margin-bottom:12px}
+.del-confirm-txt{text-align:center;font-size:14px;color:var(--tm);margin-bottom:8px}
+.del-confirm-name{text-align:center;font-size:15px;font-weight:700;color:var(--tx);margin-bottom:20px}
+
+/* ════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════ */
+.toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(120px);opacity:0;pointer-events:none;
+  background:linear-gradient(135deg,#065f46,#059669);border:1px solid rgba(16,185,129,.3);
+  border-radius:50px;padding:13px 26px;color:#fff;font-family:'Cairo',sans-serif;
+  font-size:13px;font-weight:700;display:flex;align-items:center;gap:9px;
+  box-shadow:0 8px 30px rgba(16,185,129,.35);transition:transform .45s cubic-bezier(.34,1.56,.64,1),opacity .35s;
+  z-index:9999;white-space:nowrap
+}
+.toast.err{background:linear-gradient(135deg,#7f1d1d,#ef4444);border-color:rgba(239,68,68,.4);box-shadow:0 8px 30px rgba(239,68,68,.35)}
+.toast.info{background:linear-gradient(135deg,#1e3a8a,#3b82f6);border-color:rgba(59,130,246,.4);box-shadow:0 8px 30px rgba(59,130,246,.35)}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto}
+
+/* ════════════════════════════════════════════
+   LOGIN
+════════════════════════════════════════════ */
+.login-screen{
+  position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse 80% 60% at 30% 30%,rgba(6,182,212,.15) 0%,transparent 60%),
+             linear-gradient(160deg,#0a1628 0%,#0c1e38 100%)
+}
+.login-box{width:100%;max-width:400px;background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:38px 30px;text-align:center;box-shadow:var(--glow),0 32px 64px rgba(0,0,0,.4)}
+.login-box h2{font-size:21px;font-weight:700;background:linear-gradient(135deg,var(--ac2),var(--p));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+.login-box p{font-size:11px;color:var(--tm);margin-bottom:22px}
+.login-field{width:100%;padding:12px 15px;background:rgba(14,165,233,.07);border:1px solid var(--gb);border-radius:var(--rs);color:var(--tx);font-family:'Cairo',sans-serif;font-size:14px;outline:none;margin-bottom:12px;transition:border-color .2s;text-align:center}
+.login-field:focus{border-color:var(--p)}
+.login-field::placeholder{color:rgba(125,211,252,.35)}
+.login-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--pd),var(--ac));border:none;border-radius:var(--rs);color:#fff;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 5px 18px rgba(14,165,233,.3);transition:opacity .2s}
+.login-btn:hover:not(:disabled){opacity:.9}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-err{color:#f87171;font-size:11px;margin-top:8px;display:none}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+
+@media(max-width:720px){
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .charts-grid{grid-template-columns:1fr}
+  .branches-grid{grid-template-columns:1fr}
+  .sections-grid{grid-template-columns:1fr 1fr}
+  .nav-actions .nbtn.ppt-all span:not(.btn-ico){display:none}
+  .nav-actions .nbtn.ppt-branch span:not(.btn-ico){display:none}
+}
+@media(max-width:450px){
+  .kpi-grid{grid-template-columns:1fr}
+  .sections-grid{grid-template-columns:1fr}
+  .nav-actions{gap:4px}
+  .nbtn{padding:6px 8px;font-size:11px}
+}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--pd);border-radius:8px}
+
+/* ── تنسيقات القائمة المنسدلة للتصدير (الموبايل والديسكتوب) ── */
+.export-dropdown { position: relative; display: inline-block; }
+.nbtn.export-main { background:linear-gradient(135deg,var(--pd),var(--ac)); color:#fff; box-shadow:0 3px 12px rgba(14,165,233,.3); }
+.nbtn.export-main:hover { box-shadow:0 6px 18px rgba(14,165,233,.45); }
+.dropdown-content {
+  display: none; position: absolute; top: 120%; left: 0; min-width: 150px;
+  background: rgba(8,18,34,.95); border: 1px solid var(--gb); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5); z-index: 300; overflow: hidden;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+.dropdown-content.show { display: block; animation: fadeIn .2s ease; }
+.d-btn {
+  width: 100%; text-align: right; padding: 10px 14px; background: transparent;
+  border: none; border-bottom: 1px solid rgba(14,165,233,.1);
+  color: var(--tx); font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: background .2s, color .2s;
+  display: flex; align-items: center; gap: 6px;
+}
+.d-btn:last-child { border-bottom: none; }
+.d-btn:hover { background: rgba(14,165,233,.15); color: var(--ac2); }
+.d-btn:disabled, .d-btn.loading { opacity: .5; pointer-events: none; }
+
+/* إخفاء النصوص في الناف بار على الموبايل لترك مساحة */
+@media(max-width:720px) { .hide-m { display: none !important; } }
+
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div style="font-size:46px;margin-bottom:10px;filter:drop-shadow(0 0 12px var(--p))">📊</div>
+    <h2>لوحة تحكم نسب العرض</h2>
+    <p>سجّل الدخول للوصول إلى بيانات فروع العربي</p>
+    <input class="login-field" type="email" id="loginEmail" placeholder="البريد الإلكتروني"/>
+    <input class="login-field" type="password" id="loginPass" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">🔐 دخول إلى اللوحة</button>
+    <div class="login-err" id="loginErr">بيانات غير صحيحة — تحقق وحاول مجدداً</div>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="appWrap" style="display:none">
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <span class="ico">📊</span>
+      <div>
+        <h1>نظام نسب عرض العربي</h1>
+        <p id="userLabel">جاري التحميل...</p>
+      </div>
+    </div>
+    <div class="nav-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusTxt">اتصال...</span>
+    </div>
+<div class="nav-actions">
+      <a href="/index.html" class="nbtn new-report">
+        <span class="btn-ico">➕ <span class="hide-m">تقرير جديد</span></span>
+      </a>
+
+      <!-- القائمة المنسدلة للتصدير -->
+      <div class="export-dropdown" id="exportMenuWrap">
+        <button class="nbtn export-main" onclick="toggleDropdown()">
+          <span class="btn-ico">📥 <span class="hide-m">تصدير التقارير</span></span>
+        </button>
+        <div class="dropdown-content" id="exportDropdown">
+          <button class="d-btn" id="xlsBtn" onclick="exportExcel()">🟢 Excel (الكل)</button>
+          <button class="d-btn" id="pptBtn" onclick="exportPPT()">🔵 PPT (الكل)</button>
+          <button class="d-btn" id="pptBranchBtn" onclick="openBranchPPTModal()">🏢 PPT (فرع)</button>
+        </div>
+      </div>
+
+      <button class="nbtn logout" onclick="doLogout()">
+        <span class="btn-ico">🚪 <span class="hide-m">خروج</span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- TABS -->
+  <div class="tabs-bar" id="tabsBar">
+    <div class="tab active" onclick="showTab('overview')" id="tab_overview">
+      🏠 <span>نظرة عامة</span>
+    </div>
+    <div class="tab" onclick="showTab('branches')" id="tab_branches">
+      🏢 <span>الفروع</span>
+      <span class="tab-count" id="cnt_branches">0</span>
+    </div>
+    <div class="tab" onclick="showTab('sections')" id="tab_sections">
+      📦 <span>الأقسام</span>
+    </div>
+    <div class="tab" onclick="showTab('compare')" id="tab_compare">
+      🔄 <span>مقارنة</span>
+    </div>
+    <div class="tab" onclick="showTab('reports')" id="tab_reports">
+      📋 <span>التقارير</span>
+      <span class="tab-count" id="cnt_reports">0</span>
+    </div>
+  </div>
+
+  <div class="tabs-body">
+
+    <!-- ══ OVERVIEW TAB ══ -->
+    <div class="tab-pane active" id="pane_overview">
+      <div class="page-title">
+        <h2>🏠 نظرة عامة شاملة</h2>
+        <p>ملخص أداء جميع فروع منتجات العربي</p>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card"><span class="kpi-icon">📋</span><div class="kpi-val" id="kpiReports">—</div><div class="kpi-lbl">إجمالي التقارير</div></div>
+        <div class="kpi-card green"><span class="kpi-icon">📈</span><div class="kpi-val" id="kpiAvgPct">—</div><div class="kpi-lbl">متوسط نسبة العرض</div></div>
+        <div class="kpi-card purple"><span class="kpi-icon">🏢</span><div class="kpi-val" id="kpiBranches">—</div><div class="kpi-lbl">عدد الفروع</div></div>
+        <div class="kpi-card yellow"><span class="kpi-icon">👤</span><div class="kpi-val" id="kpiAgents">—</div><div class="kpi-lbl">عدد المندوبين</div></div>
+        <div class="kpi-card green"><span class="kpi-icon">📦</span><div class="kpi-val" id="kpiTotalArabi">—</div><div class="kpi-lbl">إجمالي منتجات العربي</div></div>
+        <div class="kpi-card"><span class="kpi-icon">🛍️</span><div class="kpi-val" id="kpiTotalAll">—</div><div class="kpi-lbl">إجمالي المنتجات</div></div>
+      </div>
+      <div id="insightBanner"></div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">📊 نسبة العرض لكل فرع</div>
+          <div class="chart-wrap tall"><canvas id="chartBranch"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">🥧 توزيع المنتجات</div>
+          <div class="chart-wrap"><canvas id="chartPie"></canvas></div>
+        </div>
+        <div class="chart-card wide">
+          <div class="chart-title">📈 مسار النسب عبر الوقت</div>
+          <div class="chart-wrap"><canvas id="chartLine"></canvas></div>
+        </div>
+      </div>
+      <div class="sec-header"><h2>🏆 ترتيب الفروع بالأداء</h2></div>
+      <div class="tbl-wrap">
+        <table class="dt">
+          <thead><tr>
+            <th>الفرع</th><th>نسبة العرض</th><th>شريط الأداء</th>
+            <th>تقارير</th><th>إجمالي</th><th>العربي</th><th>التقييم</th>
+          </tr></thead>
+          <tbody id="topBranchBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ BRANCHES TAB ══ -->
+    <div class="tab-pane" id="pane_branches">
+      <div class="page-title"><h2>🏢 تحليل الفروع</h2><p>أداء كل فرع بالتفصيل مع إمكانية تصدير تقرير مخصص</p></div>
+      <div class="filter-bar">
+        <label>🔍 بحث:</label>
+        <input class="filter-input" id="branchSearch" placeholder="اسم الفرع..." oninput="filterBranches()"/>
+        <label>ترتيب:</label>
+        <select class="filter-select" id="branchSort" onchange="filterBranches()">
+          <option value="pct_desc">نسبة العرض ↓</option>
+          <option value="pct_asc">نسبة العرض ↑</option>
+          <option value="reports_desc">عدد التقارير ↓</option>
+          <option value="name">اسم الفرع أبجدياً</option>
+        </select>
+      </div>
+      <div class="branches-grid" id="branchesGrid"></div>
+      <div class="sec-header"><h2>📋 جدول الفروع التفصيلي</h2></div>
+      <div class="tbl-wrap">
+        <table class="dt">
+          <thead><tr>
+            <th>الفرع</th><th>نسبة العرض</th><th>شريط</th>
+            <th>تقارير</th><th>إجمالي</th><th>العربي</th><th>التقييم</th><th>تصدير PPT</th>
+          </tr></thead>
+          <tbody id="branchDetailBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ SECTIONS TAB ══ -->
+    <div class="tab-pane" id="pane_sections">
+      <div class="page-title"><h2>📦 تحليل الأقسام</h2><p>أداء كل قسم من منتجات العربي قبل وبعد التحسين</p></div>
+      <div class="filter-bar">
+        <label>الفرع:</label>
+        <select class="filter-select" id="secBranchFilter" onchange="renderSections()">
+          <option value="">كل الفروع</option>
+        </select>
+      </div>
+      <div class="sections-grid" id="sectionsGrid"></div>
+      <div class="sec-header"><h2>📊 مقارنة الأقسام — قبل وبعد</h2></div>
+      <div class="tbl-wrap">
+        <table class="dt">
+          <thead>
+            <tr>
+              <th rowspan="2">القسم</th>
+              <th colspan="3" class="ba-thead-before">قبل التحسين</th>
+              <th colspan="3" class="ba-thead-after">بعد التحسين</th>
+              <th rowspan="2">الفرق</th>
+              <th rowspan="2">التقييم</th>
+            </tr>
+            <tr>
+              <th class="ba-thead-before">العربي</th>
+              <th class="ba-thead-before">الإجمالي</th>
+              <th class="ba-thead-before">النسبة</th>
+              <th class="ba-thead-after">العربي</th>
+              <th class="ba-thead-after">الإجمالي</th>
+              <th class="ba-thead-after">النسبة</th>
+            </tr>
+          </thead>
+          <tbody id="sectionsTableBody"></tbody>
+        </table>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📊 مقارنة نسب الأقسام — قبل وبعد</div>
+        <div class="chart-wrap tall"><canvas id="chartSections"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ══ COMPARISON TAB ══ -->
+    <div class="tab-pane" id="pane_compare">
+      <div id="compareContent"></div>
+    </div>
+
+    <!-- ══ ALL REPORTS TAB ══ -->
+    <div class="tab-pane" id="pane_reports">
+      <div class="page-title"><h2>📋 كل التقارير</h2><p>سجل كامل بجميع التقارير مع إمكانية الحذف</p></div>
+      <div class="filter-bar">
+        <label>الفرع:</label>
+        <select class="filter-select" id="rptBranchFilter" onchange="renderReportsTable()">
+          <option value="">كل الفروع</option>
+        </select>
+        <label>المندوب:</label>
+        <select class="filter-select" id="rptAgentFilter" onchange="renderReportsTable()">
+          <option value="">كل المندوبين</option>
+        </select>
+        <label>النوع:</label>
+        <select class="filter-select" id="rptTypeFilter" onchange="renderReportsTable()">
+          <option value="">الكل</option>
+          <option value="before_after">قبل/بعد</option>
+          <option value="legacy">قديم</option>
+        </select>
+        <button class="filter-btn" onclick="clearFilters()">↺ مسح الفلاتر</button>
+        <button class="filter-btn" onclick="confirmDeleteAll()" style="border-color:rgba(239,68,68,.4);color:#f87171">🗑️ حذف الكل المصفى</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dt">
+          <thead><tr>
+            <th>#</th><th>الفرع</th><th>المندوب</th><th>نوع</th>
+            <th>قبل</th><th>بعد</th><th>الفرق</th>
+            <th>إجمالي</th><th>العربي</th><th>التاريخ</th><th>إجراء</th>
+          </tr></thead>
+          <tbody id="reportsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════ BRANCH PPT MODAL ══════════════ -->
+<div class="modal-overlay hidden" id="branchPPTModal">
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <h3>🏢 تصدير تقرير PowerPoint للفرع</h3>
+      <button class="modal-close" onclick="closeBranchPPTModal()">✕ إغلاق</button>
+    </div>
+    <div class="modal-field">
+      <label>اختر الفرع المطلوب تصدير تقريره:</label>
+      <select class="modal-select" id="branchPPTSelect" onchange="previewBranchPPT()">
+        <option value="">— اختر الفرع —</option>
+      </select>
+    </div>
+    <div class="branch-preview-card" id="branchPPTPreview">
+      <div style="font-size:13px;font-weight:700;color:var(--ac2);margin-bottom:10px">📊 معاينة بيانات الفرع</div>
+      <div class="bpc-stat"><span class="bpc-lbl">عدد التقارير</span><span class="bpc-val" id="pp_count">—</span></div>
+      <div class="bpc-stat"><span class="bpc-lbl">نسبة العرض الإجمالية</span><span class="bpc-val" id="pp_pct">—</span></div>
+      <div class="bpc-stat"><span class="bpc-lbl">متوسط قبل التحسين</span><span class="bpc-val" id="pp_before">—</span></div>
+      <div class="bpc-stat"><span class="bpc-lbl">متوسط بعد التحسين</span><span class="bpc-val" id="pp_after">—</span></div>
+      <div class="bpc-stat"><span class="bpc-lbl">إجمالي منتجات العربي</span><span class="bpc-val" id="pp_arabi">—</span></div>
+      <div class="bpc-stat"><span class="bpc-lbl">إجمالي المنتجات</span><span class="bpc-val" id="pp_total">—</span></div>
+      <div class="bpc-stat"><span class="bpc-lbl">عدد الأقسام</span><span class="bpc-val" id="pp_secs">—</span></div>
+      <div class="bpc-stat"><span class="bpc-lbl">المندوبون</span><span class="bpc-val" id="pp_agents">—</span></div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeBranchPPTModal()">إلغاء</button>
+      <button class="modal-btn confirm" id="branchPPTExportBtn" onclick="exportBranchPPT()" disabled>
+        📊 تصدير PowerPoint الفرع
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DELETE CONFIRM MODAL ══════════════ -->
+<div class="modal-overlay hidden" id="deleteModal">
+  <div class="modal-box">
+    <div class="del-confirm-ico">🗑️</div>
+    <div class="del-confirm-txt">هل أنت متأكد من حذف هذا التقرير؟</div>
+    <div class="del-confirm-name" id="deleteReportLabel">—</div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeDeleteModal()">إلغاء</button>
+      <button class="modal-btn danger" id="deleteConfirmBtn" onclick="confirmDelete()">🗑️ نعم، احذف</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DELETE ALL CONFIRM ══════════════ -->
+<div class="modal-overlay hidden" id="deleteAllModal">
+  <div class="modal-box">
+    <div class="del-confirm-ico">⚠️</div>
+    <div class="del-confirm-txt">سيتم حذف جميع التقارير المعروضة حالياً</div>
+    <div class="del-confirm-name" id="deleteAllLabel">—</div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="document.getElementById('deleteAllModal').classList.add('hidden')">إلغاء</button>
+      <button class="modal-btn danger" onclick="executeDeleteAll()">🗑️ نعم، احذف الكل</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   FIREBASE CONFIG — PRESERVED UNCHANGED
+══════════════════════════════════════════ */
+const FC = {
+  apiKey:            "AIzaSyAmzZoKM_YGQAlxHdj6N-s4iUegBrJKNAk",
+  authDomain:        "display-a3abe.firebaseapp.com",
+  databaseURL:       "https://display-a3abe-default-rtdb.firebaseio.com",
+  projectId:         "display-a3abe",
+  storageBucket:     "display-a3abe.firebasestorage.app",
+  messagingSenderId: "469714964287",
+  appId:             "1:469714964287:web:2aa2e7dd49e46599f38d8a"
+};
+
+let db = null, auth = null;
+try {
+  firebase.initializeApp(FC);
+  db = firebase.firestore();
+  auth = firebase.auth();
+  setStatus(true);
+} catch(e) { console.error('FB:', e); setStatus(false); }
+
+function setStatus(ok) {
+  document.getElementById('statusDot').className = 'status-dot' + (ok ? ' live' : '');
+  document.getElementById('statusTxt').textContent = ok ? ' متصل' : 'غير متصل';
+}
+
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
+let reports = [];
+let charts = {};
+let currentUser = null;
+let pendingDeleteId = null;
+let pendingDeleteIdx = null;
+let filteredForDelete = [];
+
+/* ══════════════════════════════════════════
+   AUTH
+══════════════════════════════════════════ */
+auth?.onAuthStateChanged(user => {
+  if (user) { currentUser = user; showApp(user); }
+  else {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('appWrap').style.display = 'none';
+  }
+});
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginErr');
+  if (!email || !pass) { err.style.display = 'block'; err.textContent = 'يرجى إدخال البريد وكلمة المرور'; return; }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> جاري الدخول...';
+  err.style.display = 'none';
+  try { await auth.signInWithEmailAndPassword(email, pass); }
+  catch(e) {
+    err.style.display = 'block';
+    err.textContent = 'بيانات غير صحيحة — تحقق وحاول مجدداً';
+    btn.disabled = false;
+    btn.innerHTML = '🔐 دخول إلى اللوحة';
+  }
+}
+
+function doLogout() { auth?.signOut(); }
+
+function showApp(user) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appWrap').style.display = 'block';
+  document.getElementById('userLabel').textContent = user.email || 'مدير';
+  loadReports();
+}
+
+/* ══════════════════════════════════════════
+   TABS
+══════════════════════════════════════════ */
+let activeTab = 'overview';
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab_' + name)?.classList.add('active');
+  document.getElementById('pane_' + name)?.classList.add('active');
+  activeTab = name;
+  if (name === 'compare') renderComparePage();
+  else if (name === 'sections') renderSections();
+  else if (name === 'branches') renderBranches();
+  else if (name === 'reports') renderReportsTable();
+}
+
+function updateTabCounts() {
+  const branches = [...new Set(reports.map(r => r.branch).filter(Boolean))];
+  document.getElementById('cnt_branches').textContent = branches.length;
+  document.getElementById('cnt_reports').textContent = reports.length;
+}
+
+/* ══════════════════════════════════════════
+   LOAD REPORTS
+══════════════════════════════════════════ */
+async function loadReports() {
+  try {
+    if (db) {
+      const snap = await db.collection('reports').orderBy('createdAt', 'desc').get();
+      reports = snap.docs.map(d => ({ ...d.data(), _docId: d.id }));
+    } else {
+      reports = JSON.parse(localStorage.getItem('arabi_reports') || '[]');
+    }
+    reports = reports.map(normalizeReport);
+    populateFilters();
+    updateTabCounts();
+    renderOverview();
+  } catch(e) {
+    console.error('Load:', e);
+    reports = JSON.parse(localStorage.getItem('arabi_reports') || '[]').map(normalizeReport);
+    populateFilters();
+    updateTabCounts();
+    renderOverview();
+    showToast('خطأ في تحميل البيانات', 'err');
+  }
+}
+
+function normalizeReport(r) {
+  if (r.reportType === 'before_after' && r.sections) {
+    return { ...r,
+      _pctBefore: r.avgBefore || 0,
+      _pctAfter:  r.avgAfter || 0,
+      _pct:       r.avgAfter || 0,
+      _totalArabi: r.totalAA || r.arabi || 0,
+      _totalAll:   r.totalTA || r.total || 0,
+      _isNew: true
+    };
+  }
+  const pct = parseFloat(r.pct) || 0;
+  return { ...r,
+    _pctBefore: 0, _pctAfter: pct, _pct: pct,
+    _totalArabi: r.arabi || 0, _totalAll: r.total || 0,
+    _isNew: false, sections: []
+  };
+}
+
+/* ══════════════════════════════════════════
+   OVERVIEW
+══════════════════════════════════════════ */
+function renderOverview() {
+  if (!reports.length) {
+    document.getElementById('pane_overview').innerHTML = `
+      <div class="no-data">
+        <span class="nd-ico">📊</span>
+        <h3>لا توجد تقارير بعد</h3>
+        <p>أرسل أول تقرير لعرض البيانات هنا</p>
+        <a href="/index.html" class="add-report-link">➕ إضافة تقرير</a>
+      </div>`;
+    return;
+  }
+  const branches = [...new Set(reports.map(r => r.branch).filter(Boolean))];
+  const agents   = [...new Set(reports.map(r => r.agent).filter(Boolean))];
+  const totalArabi = reports.reduce((s, r) => s + (r._totalArabi || 0), 0);
+  const totalAll   = reports.reduce((s, r) => s + (r._totalAll || 0), 0);
+  const avgPct = totalAll > 0 ? +((totalArabi / totalAll) * 100).toFixed(1) : 0;
+
+  document.getElementById('kpiReports').textContent    = reports.length;
+  document.getElementById('kpiAvgPct').textContent     = avgPct + '%';
+  document.getElementById('kpiBranches').textContent   = branches.length;
+  document.getElementById('kpiAgents').textContent     = agents.length;
+  document.getElementById('kpiTotalArabi').textContent = totalArabi.toLocaleString();
+  document.getElementById('kpiTotalAll').textContent   = totalAll.toLocaleString();
+
+  // Insight banner
+  const ib = document.getElementById('insightBanner');
+  const newRpts = reports.filter(r => r._isNew);
+  if (newRpts.length > 0) {
+    const ab = +(newRpts.reduce((s, r) => s + (r._pctBefore || 0), 0) / newRpts.length).toFixed(1);
+    const aa = +(newRpts.reduce((s, r) => s + (r._pctAfter  || 0), 0) / newRpts.length).toFixed(1);
+    const delta = +(aa - ab).toFixed(1);
+    const cls = delta > 0 ? 'green' : delta < 0 ? 'red' : 'yellow';
+    const col = delta > 0 ? '#34d399' : delta < 0 ? '#f87171' : '#fbbf24';
+    ib.innerHTML = `<div class="insight-banner ${cls}">
+      <div class="ib-ico">${delta>0?'📈':delta<0?'📉':'➡️'}</div>
+      <div class="ib-txt">
+        <div class="ib-title" style="color:${col}">${delta>0?'تحسّن ملحوظ في النسب':delta<0?'تراجع في النسب يستدعي المراجعة':'النسب ثابتة'} — ${newRpts.length} تقرير قبل/بعد</div>
+        <div class="ib-sub">متوسط قبل: ${ab}% | متوسط بعد: ${aa}% | الفرق: ${delta>0?'+':''}${delta}%</div>
+      </div>
+      <div style="font-size:22px;font-weight:900;color:${col}">${delta>0?'+':''}${delta}%</div>
+    </div>`;
+  } else { ib.innerHTML = ''; }
+
+  const brStats = calcBranchStats();
+  const tbody = document.getElementById('topBranchBody');
+  tbody.innerHTML = '';
+  [...brStats].sort((a, b) => b.pct - a.pct).forEach((b, i) => {
+    const { cls, fillCls, label } = ratingInfo(b.pct);
+    const pctCol = b.pct >= 50 ? '#34d399' : b.pct >= 30 ? '#fbbf24' : '#f87171';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:700;color:var(--pl)">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`} ${b.branch}</td>
+      <td style="font-weight:900;color:${pctCol};font-size:15px">${b.pct}%</td>
+      <td><div class="pbar"><div class="pbar-track"><div class="pbar-fill ${fillCls}" style="width:${Math.min(b.pct,100)}%"></div></div></div></td>
+      <td>${b.count}</td>
+      <td>${b.totalAll.toLocaleString()}</td>
+      <td>${b.totalArabi.toLocaleString()}</td>
+      <td><span class="badge ${cls}">${label}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  drawOverviewCharts(brStats);
+}
+
+function calcBranchStats() {
+  const map = {};
+  reports.forEach(r => {
+    if (!r.branch) return;
+    if (!map[r.branch]) map[r.branch] = { branch: r.branch, count: 0, totalArabi: 0, totalAll: 0 };
+    map[r.branch].count++;
+    map[r.branch].totalArabi += r._totalArabi || 0;
+    map[r.branch].totalAll   += r._totalAll   || 0;
+  });
+  return Object.values(map).map(b => ({
+    ...b, pct: b.totalAll > 0 ? +((b.totalArabi / b.totalAll) * 100).toFixed(1) : 0
+  }));
+}
+
+function ratingInfo(pct) {
+  if (pct >= 50) return { cls:'g', fillCls:'green-fill',  label:'⭐⭐⭐ ممتاز' };
+  if (pct >= 30) return { cls:'y', fillCls:'yellow-fill', label:'⭐⭐ جيد' };
+  return { cls:'r', fillCls:'red-fill', label:'⭐ يحتاج تحسين' };
+}
+
+function drawOverviewCharts(brStats) {
+  const sorted = [...brStats].sort((a, b) => b.pct - a.pct);
+
+  const ctx1 = document.getElementById('chartBranch');
+  if (ctx1) {
+    if (charts.branch) charts.branch.destroy();
+    charts.branch = new Chart(ctx1, {
+      type: 'bar',
+      data: { labels: sorted.map(b => b.branch), datasets: [{
+        label:'نسبة العرض %', data: sorted.map(b => b.pct),
+        backgroundColor: sorted.map(b => b.pct>=50?'rgba(52,211,153,.75)':b.pct>=30?'rgba(251,191,36,.75)':'rgba(248,113,113,.75)'),
+        borderRadius:7, borderSkipped:false
+      }]},
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>`${c.raw}%`}}},
+        scales:{ y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%',color:'rgba(125,211,252,.8)',font:{size:10}},grid:{color:'rgba(14,165,233,.06)'}},
+                 x:{ticks:{color:'rgba(125,211,252,.8)',font:{size:9},maxRotation:30},grid:{display:false}}}}
+    });
+  }
+
+  const ctx2 = document.getElementById('chartPie');
+  if (ctx2) {
+    if (charts.pie) charts.pie.destroy();
+    const tA = reports.reduce((s,r)=>s+(r._totalArabi||0),0);
+    const tO = reports.reduce((s,r)=>s+((r._totalAll||0)-(r._totalArabi||0)),0);
+    charts.pie = new Chart(ctx2, {
+      type:'doughnut',
+      data:{ labels:['منتجات العربي','منتجات أخرى'], datasets:[{
+        data:[tA,tO],
+        backgroundColor:['rgba(14,165,233,.8)','rgba(30,41,59,.8)'],
+        borderColor:['rgba(14,165,233,.5)','rgba(14,165,233,.1)'],
+        borderWidth:2,hoverOffset:7
+      }]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{position:'bottom',labels:{color:'rgba(125,211,252,.9)',font:{size:11},padding:12,usePointStyle:true}},
+                  tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw.toLocaleString()} (${(c.raw/(tA+tO)*100).toFixed(1)}%)`}}}}
+    });
+  }
+
+  const ctx3 = document.getElementById('chartLine');
+  if (ctx3) {
+    if (charts.line) charts.line.destroy();
+    const sr = [...reports].sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+    charts.line = new Chart(ctx3, {
+      type:'line',
+      data:{
+        labels: sr.map(r=>`${r.branch||'—'}`),
+        datasets:[{
+          label:'نسبة العرض %', data:sr.map(r=>r._pct||0),
+          borderColor:'rgba(14,165,233,.9)', backgroundColor:'rgba(14,165,233,.07)',
+          pointBackgroundColor: sr.map(r=>r._isNew?'rgba(167,139,250,1)':'rgba(14,165,233,1)'),
+          pointRadius:5, borderWidth:2, tension:.3, fill:true
+        }]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>`${c.raw}%`}}},
+        scales:{ y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%',color:'rgba(125,211,252,.8)',font:{size:10}},grid:{color:'rgba(14,165,233,.06)'}},
+                 x:{ticks:{color:'rgba(125,211,252,.8)',font:{size:9},maxRotation:35},grid:{display:false}}}}
+    });
+  }
+}
+
+/* ══════════════════════════════════════════
+   BRANCHES TAB
+══════════════════════════════════════════ */
+let _brStats = [];
+function renderBranches() {
+  _brStats = calcBranchStats();
+  filterBranches();
+  renderBranchDetail(_brStats);
+}
+
+function filterBranches() {
+  const search = (document.getElementById('branchSearch')?.value || '').toLowerCase();
+  const sort   = document.getElementById('branchSort')?.value || 'pct_desc';
+  let data = [..._brStats];
+  if (search) data = data.filter(b => b.branch.toLowerCase().includes(search));
+  if (sort==='pct_desc')     data.sort((a,b)=>b.pct-a.pct);
+  else if (sort==='pct_asc') data.sort((a,b)=>a.pct-b.pct);
+  else if (sort==='reports_desc') data.sort((a,b)=>b.count-a.count);
+  else data.sort((a,b)=>a.branch.localeCompare(b.branch,'ar'));
+
+  const grid = document.getElementById('branchesGrid');
+  grid.innerHTML = '';
+  if (!data.length) {
+    grid.innerHTML='<div class="no-data" style="grid-column:1/-1"><span class="nd-ico">🏢</span><h3>لا توجد فروع مطابقة</h3></div>';
+    return;
+  }
+  data.forEach(b => {
+    const {fillCls} = ratingInfo(b.pct);
+    const pctCol = b.pct>=50?'#34d399':b.pct>=30?'#fbbf24':'#f87171';
+    const brRpts = reports.filter(r=>r.branch===b.branch).sort((x,y)=>(x.createdAt?.seconds||0)-(y.createdAt?.seconds||0));
+    const trend = brRpts.length>=2 ? +(brRpts[brRpts.length-1]._pct - brRpts[0]._pct).toFixed(1) : null;
+    const lastDate = brRpts[brRpts.length-1]?.timestamp?.slice(0,10) || '—';
+
+    const div = document.createElement('div');
+    div.className = 'branch-card';
+    div.innerHTML = `
+      <div class="branch-name">
+        <span>🏢 ${b.branch}</span>
+        ${trend!==null?`<span class="branch-trend" style="color:${trend>0?'#34d399':trend<0?'#f87171':'#7dd3fc'}">${trend>0?'📈':trend<0?'📉':'➡️'} ${trend>0?'+':''}${trend}%</span>`:''}
+      </div>
+      <div class="branch-metas">
+        <div class="branch-meta"><div class="m-val">${b.count}</div><div class="m-lbl">تقارير</div></div>
+        <div class="branch-meta"><div class="m-val">${b.totalAll.toLocaleString()}</div><div class="m-lbl">إجمالي</div></div>
+        <div class="branch-meta"><div class="m-val">${b.totalArabi.toLocaleString()}</div><div class="m-lbl">العربي</div></div>
+        <div class="branch-meta"><div class="m-val">${(b.totalAll-b.totalArabi).toLocaleString()}</div><div class="m-lbl">منافسون</div></div>
+      </div>
+      <div class="branch-pct-row">
+        <div class="branch-pct-num" style="color:${pctCol}">${b.pct}%</div>
+        <div class="branch-pct-bar"><div class="branch-pct-fill ${fillCls}" style="width:${Math.min(b.pct,100)}%"></div></div>
+      </div>
+      <div class="branch-reports">آخر تقرير: ${lastDate}</div>
+      <div class="branch-actions">
+        <button class="act-btn ppt" onclick="exportBranchPPTDirect('${b.branch.replace(/'/g,"\\'")}')">📊 تصدير PPT</button>
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function renderBranchDetail(data) {
+  const tbody = document.getElementById('branchDetailBody');
+  tbody.innerHTML = '';
+  [...data].sort((a,b)=>b.pct-a.pct).forEach((b,i)=>{
+    const {cls,fillCls,label} = ratingInfo(b.pct);
+    const pctCol = b.pct>=50?'#34d399':b.pct>=30?'#fbbf24':'#f87171';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:700;color:var(--pl)">${i+1}. ${b.branch}</td>
+      <td style="font-weight:900;color:${pctCol};font-size:14px">${b.pct}%</td>
+      <td><div class="pbar"><div class="pbar-track"><div class="pbar-fill ${fillCls}" style="width:${Math.min(b.pct,100)}%"></div></div></div></td>
+      <td>${b.count}</td>
+      <td>${b.totalAll.toLocaleString()}</td>
+      <td>${b.totalArabi.toLocaleString()}</td>
+      <td><span class="badge ${cls}">${label}</span></td>
+      <td><button class="act-btn ppt" onclick="exportBranchPPTDirect('${b.branch.replace(/'/g,"\\'")}')">📊 PPT</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ══════════════════════════════════════════
+   SECTIONS TAB
+══════════════════════════════════════════ */
+const SEC_ICONS = {'الشاشات':'🖥️','الغسالات':'🧺','الثلاجات':'❄️','البوتاجازات':'🔥','التكييفات':'🌬️','الأجهزة الصغيرة':'⚡','التلفزيونات':'📺'};
+
+function calcSectionsData(filterBranch='') {
+  const src = filterBranch ? reports.filter(r=>r.branch===filterBranch) : reports;
+  const map = {};
+  src.forEach(r => {
+    (r.sections||[]).forEach(s => {
+      if (!s.label) return;
+      if (!map[s.label]) map[s.label]={label:s.label,arabiB:0,totalB:0,arabiA:0,totalA:0,count:0};
+      map[s.label].arabiB+=s.arabiB||0; map[s.label].totalB+=s.totalB||0;
+      map[s.label].arabiA+=s.arabiA||0; map[s.label].totalA+=s.totalA||0;
+      map[s.label].count++;
+    });
+  });
+  return Object.values(map).map(s=>({
+    ...s,
+    pctBefore: s.totalB>0?+((s.arabiB/s.totalB)*100).toFixed(1):0,
+    pctAfter:  s.totalA>0?+((s.arabiA/s.totalA)*100).toFixed(1):0,
+    diff: s.totalA>0&&s.totalB>0?+((s.arabiA/s.totalA-s.arabiB/s.totalB)*100).toFixed(1):0
+  })).sort((a,b)=>b.pctAfter-a.pctAfter);
+}
+
+function renderSections() {
+  const fb = document.getElementById('secBranchFilter')?.value||'';
+  const data = calcSectionsData(fb);
+  const grid = document.getElementById('sectionsGrid');
+  grid.innerHTML='';
+  if (!data.length) {
+    grid.innerHTML='<div class="no-data" style="grid-column:1/-1"><span class="nd-ico">📦</span><h3>لا توجد بيانات أقسام</h3><p>أرسل تقارير بنوع قبل/بعد لعرض بيانات الأقسام</p></div>';
+  } else {
+    data.forEach(s=>{
+      const cls=s.pctAfter>=50?'g':s.pctAfter>=30?'y':'r';
+      const icon=SEC_ICONS[s.label]||'📦';
+      const diff_col=s.diff>0?'#34d399':s.diff<0?'#f87171':'#7dd3fc';
+      const div=document.createElement('div');
+      div.className=`sec-card ${cls}`;
+      div.innerHTML=`
+        <span class="sec-icon">${icon}</span>
+        <div class="sec-name">${s.label}</div>
+        <div class="sec-big-pct">${s.pctAfter}%</div>
+        <div class="sec-stats"><span>عربي: ${s.arabiA}</span><span>إجمالي: ${s.totalA}</span></div>
+        ${s.totalB>0?`<div style="font-size:11px;color:${diff_col};font-weight:700;margin-top:6px">${s.diff>0?'+':''}${s.diff}% فرق</div>`:''}
+      `;
+      grid.appendChild(div);
+    });
+  }
+  const tbody=document.getElementById('sectionsTableBody');
+  tbody.innerHTML='';
+  data.forEach(s=>{
+    const {cls,label}=ratingInfo(s.pctAfter);
+    const dc=s.diff>0?'#34d399':s.diff<0?'#f87171':'#7dd3fc';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="font-weight:700;color:var(--pl)">${SEC_ICONS[s.label]||'📦'} ${s.label}</td>
+      <td style="color:#f87171">${s.arabiB}</td><td>${s.totalB}</td>
+      <td style="font-weight:700;color:#f87171">${s.pctBefore}%</td>
+      <td style="color:#34d399">${s.arabiA}</td><td>${s.totalA}</td>
+      <td style="font-weight:700;color:#34d399">${s.pctAfter}%</td>
+      <td style="font-weight:900;font-size:13px;color:${dc}">${s.diff>0?'+':''}${s.diff}%</td>
+      <td><span class="badge ${cls}">${label}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  drawSectionsChart(data);
+}
+
+function drawSectionsChart(data) {
+  const ctx=document.getElementById('chartSections');
+  if (!ctx) return;
+  if (charts.sections) charts.sections.destroy();
+  charts.sections=new Chart(ctx,{
+    type:'bar',
+    data:{ labels:data.map(s=>s.label), datasets:[
+      {label:'نسبة قبل %',data:data.map(s=>s.pctBefore),backgroundColor:'rgba(248,113,113,.65)',borderRadius:5,borderSkipped:false},
+      {label:'نسبة بعد %', data:data.map(s=>s.pctAfter), backgroundColor:'rgba(52,211,153,.75)',borderRadius:5,borderSkipped:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{color:'rgba(125,211,252,.9)',font:{size:11},usePointStyle:true}},
+               tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}%`}}},
+      scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%',color:'rgba(125,211,252,.8)',font:{size:10}},grid:{color:'rgba(14,165,233,.06)'}},
+              x:{ticks:{color:'rgba(125,211,252,.8)',font:{size:10}},grid:{display:false}}}}
+  });
+}
+
+/* ══════════════════════════════════════════
+   COMPARISON TAB
+══════════════════════════════════════════ */
+let cmpCharts={};
+function renderComparePage() {
+  const cont=document.getElementById('compareContent');
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))];
+  const cmpBranches=branches.filter(b=>reports.filter(r=>r.branch===b).length>=2);
+
+  cont.innerHTML=`
+    <div class="page-title"><h2>🔄 مقارنة النسب قبل وبعد</h2><p>اختر فرعاً وحدد التقريرين للمقارنة</p></div>
+    <div class="filter-bar" style="flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <label>🏢 الفرع:</label>
+        <select class="filter-select" id="cmpBranchSel" onchange="onCmpBranchChange()">
+          <option value="">— اختر —</option>
+          ${branches.map(b=>`<option value="${b}">${b} (${reports.filter(r=>r.branch===b).length} تقارير)</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label>📅 الأول:</label>
+        <select class="filter-select" id="cmpBeforeSel"><option value="">— —</option></select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label>📅 الثاني:</label>
+        <select class="filter-select" id="cmpAfterSel"><option value="">— —</option></select>
+      </div>
+      <button class="nbtn ppt-all" style="border-radius:8px;font-size:13px;padding:8px 18px" onclick="runComparison()">⚡ عرض المقارنة</button>
+    </div>
+    <div id="cmpResult"></div>
+    ${cmpBranches.length?`
+      <div class="sec-header" style="margin-top:20px"><h2>📋 فروع قابلة للمقارنة (${cmpBranches.length})</h2></div>
+      <div id="cmpAllTimelines"></div>
+    `:`<div class="no-data" style="padding:40px"><span class="nd-ico">🔄</span><h3>لا توجد فروع بتقارير متعددة</h3><p>أرسل تقريراً ثانياً لأي فرع</p></div>`}
+  `;
+
+  if (cmpBranches.length) {
+    renderAllTimelines(cmpBranches);
+    const sel=document.getElementById('cmpBranchSel');
+    if (sel&&cmpBranches[0]){sel.value=cmpBranches[0];onCmpBranchChange();}
+  }
+}
+
+function onCmpBranchChange() {
+  const branch=document.getElementById('cmpBranchSel')?.value;
+  const bSel=document.getElementById('cmpBeforeSel');
+  const aSel=document.getElementById('cmpAfterSel');
+  if (!bSel||!aSel) return;
+  bSel.innerHTML='<option value="">— اختر —</option>';
+  aSel.innerHTML='<option value="">— اختر —</option>';
+  if (!branch) return;
+  const br=reports.filter(r=>r.branch===branch).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+  br.forEach((r,i)=>{
+    const pct=r._isNew?`${r._pctBefore}%→${r._pctAfter}%`:r._pct+'%';
+    const label=`${i+1}. ${r.agent||'—'} — ${pct} — ${r.timestamp||''}`;
+    const val=r._docId||String(i);
+    bSel.innerHTML+=`<option value="${val}">${label}</option>`;
+    aSel.innerHTML+=`<option value="${val}">${label}</option>`;
+  });
+  if (br.length>=2){bSel.selectedIndex=1;aSel.selectedIndex=br.length;}
+  const res=document.getElementById('cmpResult');
+  if (res) res.innerHTML='';
+}
+
+function runComparison() {
+  const branch=document.getElementById('cmpBranchSel')?.value;
+  const bKey=document.getElementById('cmpBeforeSel')?.value;
+  const aKey=document.getElementById('cmpAfterSel')?.value;
+  if (!branch||!bKey||!aKey){showToast('اختر الفرع والتقريرين','err');return;}
+  if (bKey===aKey){showToast('اختر تقريرين مختلفين','err');return;}
+  const br=reports.filter(r=>r.branch===branch).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+  const rB=br.find((r,i)=>(r._docId||String(i))===bKey);
+  const rA=br.find((r,i)=>(r._docId||String(i))===aKey);
+  if (!rB||!rA){showToast('لم يُعثر على التقرير','err');return;}
+  const pB=rB._pct||0,pA=rA._pct||0;
+  const delta=+(pA-pB).toFixed(1);
+  const up=delta>0,same=delta===0;
+  const dc=up?'#34d399':same?'#7dd3fc':'#f87171';
+  const secsB=rB.sections||[],secsA=rA.sections||[];
+  const allL=[...new Set([...secsB.map(s=>s.label),...secsA.map(s=>s.label)])];
+  const secCmp=allL.map(lbl=>{
+    const sb=secsB.find(s=>s.label===lbl)||{};
+    const sa=secsA.find(s=>s.label===lbl)||{};
+    const pb=sb.totalA>0?+((sb.arabiA/sb.totalA)*100).toFixed(1):sb.pctAfter||0;
+    const pa=sa.totalA>0?+((sa.arabiA/sa.totalA)*100).toFixed(1):sa.pctAfter||0;
+    return{lbl,pb,pa,d:+(pa-pb).toFixed(1)};
+  }).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
+  const maxP=Math.max(...secCmp.map(s=>Math.max(s.pb,s.pa)),1);
+
+  const res=document.getElementById('cmpResult');
+  res.innerHTML=`
+    <div style="margin-bottom:20px">
+      <div class="cmp-hero" style="margin-top:18px">
+        <div class="cmp-side before">
+          <div class="cmp-side-tag">📅 التقرير الأول</div>
+          <div class="cmp-side-title">${rB.agent||'—'}</div>
+          <div class="cmp-side-date">${rB.timestamp||''}</div>
+          <div class="cmp-big-pct">${pB}%</div>
+          <div class="cmp-meta-row">
+            <div class="cmp-meta"><div class="cmp-meta-v">${rB._totalAll||0}</div><div class="cmp-meta-l">إجمالي</div></div>
+            <div class="cmp-meta"><div class="cmp-meta-v">${rB._totalArabi||0}</div><div class="cmp-meta-l">عربي</div></div>
+          </div>
+        </div>
+        <div class="cmp-arrow">
+          <div class="cmp-delta-arrow">${up?'📈':same?'➡️':'📉'}</div>
+          <div class="cmp-delta-box"><div class="cmp-delta-val" style="color:${dc}">${delta>0?'+':''}${delta}%</div><div class="cmp-delta-lbl">${up?'تحسّن':same?'ثابت':'تراجع'}</div></div>
+          <div style="font-size:9px;color:var(--tm);text-align:center">فرع<br><strong style="color:var(--ac2)">${branch}</strong></div>
+        </div>
+        <div class="cmp-side after">
+          <div class="cmp-side-tag">✅ التقرير الثاني</div>
+          <div class="cmp-side-title">${rA.agent||'—'}</div>
+          <div class="cmp-side-date">${rA.timestamp||''}</div>
+          <div class="cmp-big-pct">${pA}%</div>
+          <div class="cmp-meta-row">
+            <div class="cmp-meta"><div class="cmp-meta-v">${rA._totalAll||0}</div><div class="cmp-meta-l">إجمالي</div></div>
+            <div class="cmp-meta"><div class="cmp-meta-v">${rA._totalArabi||0}</div><div class="cmp-meta-l">عربي</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="insight-banner ${up?'green':same?'yellow':'red'}" style="margin-top:14px">
+        <div class="ib-ico">${up?'🎯':same?'📊':'⚠️'}</div>
+        <div class="ib-txt">
+          <div class="ib-title" style="color:${dc}">${up?`تحسّن +${delta}%`:same?'النسبة ثابتة':`تراجع ${delta}%`}</div>
+          <div class="ib-sub">${up?'استمر في هذا المسار':same?'راجع الأقسام الضعيفة':'اتخاذ إجراءات تصحيحية مطلوب'}</div>
+        </div>
+        <div style="font-size:24px;font-weight:900;color:${dc}">${delta>0?'+':''}${delta}%</div>
+      </div>
+      <div class="cmp-chart-row" style="margin-top:18px">
+        <div class="chart-card"><div class="chart-title">📈 مسار كل التقارير</div><div class="chart-wrap"><canvas id="cmpLineChart"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">📊 مقارنة المنتجات</div><div class="chart-wrap"><canvas id="cmpBarChart"></canvas></div></div>
+      </div>
+      ${secCmp.length?`
+      <div class="sec-header"><h2>📦 مقارنة الأقسام</h2></div>
+      <div class="cmp-sec-card">
+        <div style="display:flex;gap:16px;margin-bottom:10px;font-size:10px;font-weight:700">
+          <span style="color:#f87171">▬ التقرير الأول</span><span style="color:#34d399">▬ التقرير الثاني</span>
+        </div>
+        ${secCmp.map(s=>{
+          const sc=s.d>0?'#34d399':s.d<0?'#f87171':'#7dd3fc';
+          return`<div class="cmp-sec-row">
+            <div class="cmp-sec-name">${s.lbl}</div>
+            <div class="cmp-sec-bars">
+              <div class="cmp-bar-row"><span class="cmp-bar-label" style="color:#f87171">ق</span><div class="cmp-bar-track"><div class="cmp-bar-fill-b" style="width:${(s.pb/maxP)*100}%"></div></div><span style="font-size:9px;color:#f87171;min-width:30px;font-weight:700">${s.pb}%</span></div>
+              <div class="cmp-bar-row"><span class="cmp-bar-label" style="color:#34d399">ب</span><div class="cmp-bar-track"><div class="cmp-bar-fill-a" style="width:${(s.pa/maxP)*100}%"></div></div><span style="font-size:9px;color:#34d399;min-width:30px;font-weight:700">${s.pa}%</span></div>
+            </div>
+            <div class="cmp-sec-delta" style="color:${sc}">${s.d>0?'+':''}${s.d}%</div>
+          </div>`;
+        }).join('')}
+      </div>`:''}
+      <div class="sec-header" style="margin-top:18px"><h2>🕐 سجل تقارير فرع ${branch}</h2></div>
+      <div class="cmp-timeline">
+        ${br.map((r,i)=>{
+          const pp=r._pct||0;
+          const prev=i>0?(br[i-1]._pct||0):null;
+          const chg=prev!==null?+(pp-prev).toFixed(1):null;
+          const isB=(r._docId||String(i))===bKey,isA=(r._docId||String(i))===aKey;
+          const col=pp>=50?'#34d399':pp>=30?'#fbbf24':'#f87171';
+          return`<div class="cmp-tl-row" style="${isB?'background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);':isA?'background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);':''}border-radius:8px">
+            <div class="report-dot" style="background:${col}22;color:${col}">${i+1}</div>
+            <div class="cmp-tl-info">
+              <div class="cmp-tl-agent">${r.agent||'—'} ${isB?'<span style="font-size:9px;background:rgba(248,113,113,.2);color:#f87171;padding:1px 5px;border-radius:8px">أول</span>':isA?'<span style="font-size:9px;background:rgba(52,211,153,.2);color:#34d399;padding:1px 5px;border-radius:8px">ثاني</span>':''}</div>
+              <div class="cmp-tl-date">${r.timestamp||''}</div>
+            </div>
+            <div class="cmp-tl-pct" style="color:${col}">${pp}%</div>
+            ${chg!==null?`<div class="cmp-tl-change" style="color:${chg>0?'#34d399':chg<0?'#f87171':'#7dd3fc'}">${chg>0?'+':''}${chg}%</div>`:'<div class="cmp-tl-change" style="color:var(--tm)">—</div>'}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  setTimeout(()=>{
+    const c1=document.getElementById('cmpLineChart');
+    if (c1) {
+      if (cmpCharts.line) cmpCharts.line.destroy();
+      const ptC=br.map((r,i)=>{const k=r._docId||String(i);return k===bKey?'rgba(248,113,113,1)':k===aKey?'rgba(52,211,153,1)':'rgba(14,165,233,.8)';});
+      const ptS=br.map((r,i)=>{const k=r._docId||String(i);return(k===bKey||k===aKey)?8:4;});
+      cmpCharts.line=new Chart(c1,{type:'line',data:{labels:br.map((r,i)=>`${i+1}.${r.agent||'—'}`),datasets:[{label:'%',data:br.map(r=>r._pct||0),borderColor:'rgba(14,165,233,.8)',backgroundColor:'rgba(14,165,233,.06)',pointBackgroundColor:ptC,pointRadius:ptS,borderWidth:2,tension:.3,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw}%`}}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%',color:'rgba(125,211,252,.8)',font:{size:10}},grid:{color:'rgba(14,165,233,.06)'}},x:{ticks:{color:'rgba(125,211,252,.8)',font:{size:9}},grid:{display:false}}}}});
+    }
+    const c2=document.getElementById('cmpBarChart');
+    if (c2) {
+      if (cmpCharts.bar) cmpCharts.bar.destroy();
+      cmpCharts.bar=new Chart(c2,{type:'bar',data:{labels:['إجمالي','منتجات العربي'],datasets:[{label:'الأول',data:[rB._totalAll||0,rB._totalArabi||0],backgroundColor:'rgba(248,113,113,.7)',borderRadius:6,borderSkipped:false},{label:'الثاني',data:[rA._totalAll||0,rA._totalArabi||0],backgroundColor:'rgba(52,211,153,.7)',borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{color:'rgba(125,211,252,.9)',font:{size:11},usePointStyle:true}}},scales:{y:{beginAtZero:true,ticks:{color:'rgba(125,211,252,.8)',font:{size:10}},grid:{color:'rgba(14,165,233,.06)'}},x:{ticks:{color:'rgba(125,211,252,.8)',font:{size:10}},grid:{display:false}}}}});
+    }
+  }, 80);
+}
+
+function renderAllTimelines(cmpBranches) {
+  const cont=document.getElementById('cmpAllTimelines');
+  if (!cont) return;
+  let html='';
+  cmpBranches.forEach(b=>{
+    const br=reports.filter(r=>r.branch===b).sort((a,x)=>(a.createdAt?.seconds||0)-(x.createdAt?.seconds||0));
+    const d=+((br[br.length-1]._pct||0)-(br[0]._pct||0)).toFixed(1);
+    const dc=d>0?'#34d399':d<0?'#f87171':'#7dd3fc';
+    html+=`<div style="background:var(--glass);border:1px solid var(--gb);border-radius:var(--r);padding:14px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:14px;font-weight:700;color:var(--ac2)">🏢 ${b}</span>
+        <span style="font-size:11px;color:var(--tm)">${br.length} تقارير</span>
+        <span style="margin-right:auto;font-size:13px;font-weight:700;color:${dc}">${d>0?'📈':d<0?'📉':'➡️'} ${d>0?'+':''}${d}%</span>
+      </div>
+      <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:3px">
+        ${br.map((r,i)=>{const pp=r._pct||0;const col=pp>=50?'#34d399':pp>=30?'#fbbf24':'#f87171';
+          return`<div style="min-width:80px;background:rgba(14,165,233,.06);border:1px solid rgba(14,165,233,.14);border-radius:8px;padding:7px;text-align:center;flex-shrink:0">
+            <div style="font-size:8px;color:var(--tm);margin-bottom:3px">${i+1}</div>
+            <div style="font-size:17px;font-weight:900;color:${col}">${pp}%</div>
+            <div style="font-size:8px;color:var(--tm)">${r.agent||'—'}</div>
+          </div>`;}).join('')}
+      </div>
+    </div>`;
+  });
+  cont.innerHTML=html;
+}
+
+/* ══════════════════════════════════════════
+   REPORTS TABLE
+══════════════════════════════════════════ */
+function renderReportsTable() {
+  const brF = document.getElementById('rptBranchFilter')?.value||'';
+  const agF = document.getElementById('rptAgentFilter')?.value||'';
+  const tpF = document.getElementById('rptTypeFilter')?.value||'';
+  let data=[...reports];
+  if (brF) data=data.filter(r=>r.branch===brF);
+  if (agF) data=data.filter(r=>r.agent===agF);
+  if (tpF==='before_after') data=data.filter(r=>r._isNew);
+  else if (tpF==='legacy') data=data.filter(r=>!r._isNew);
+  filteredForDelete=[...data];
+
+  const tbody=document.getElementById('reportsBody');
+  tbody.innerHTML='';
+  if (!data.length) {
+    tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--tm)">لا توجد تقارير مطابقة</td></tr>';
+    return;
+  }
+  data.forEach((r,i)=>{
+    const pct=r._pct||0,pctB=r._pctBefore||0;
+    const diff=r._isNew?+(pct-pctB).toFixed(1):null;
+    const dc=diff!==null?(diff>0?'#34d399':diff<0?'#f87171':'#7dd3fc'):'#7dd3fc';
+    const {cls,label}=ratingInfo(pct);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="color:var(--tm);font-size:11px">${i+1}</td>
+      <td style="font-weight:700;color:var(--pl)">${r.branch||'—'}</td>
+      <td>${r.agent||'—'}</td>
+      <td><span class="tag ${r._isNew?'ba':''}">${r._isNew?'🔄 قبل/بعد':'📋 قديم'}</span></td>
+      <td style="color:#f87171;font-weight:700">${r._isNew?pctB+'%':'—'}</td>
+      <td style="color:#34d399;font-weight:700">${pct}%</td>
+      <td style="font-weight:700;color:${dc}">${diff!==null?(diff>0?'+':'')+diff+'%':'—'}</td>
+      <td>${(r._totalAll||0).toLocaleString()}</td>
+      <td>${(r._totalArabi||0).toLocaleString()}</td>
+      <td style="font-size:10px;color:var(--tm)">${r.timestamp||'—'}</td>
+      <td>
+        <button class="act-btn del" onclick="openDeleteModal('${r._docId||''}','${r.branch||'—'} / ${r.agent||'—'}')">🗑️ حذف</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ══════════════════════════════════════════
+   DELETE — SINGLE
+══════════════════════════════════════════ */
+function openDeleteModal(docId, label) {
+  pendingDeleteId = docId;
+  document.getElementById('deleteReportLabel').textContent = label;
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+  pendingDeleteId = null;
+  document.getElementById('deleteModal').classList.add('hidden');
+}
+
+async function confirmDelete() {
+  const btn = document.getElementById('deleteConfirmBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> جاري الحذف...';
+  try {
+    if (pendingDeleteId && db) {
+      await db.collection('reports').doc(pendingDeleteId).delete();
+    } else {
+      const arr = JSON.parse(localStorage.getItem('arabi_reports')||'[]');
+      const filtered = arr.filter(r => (r._docId||r.id) !== pendingDeleteId);
+      localStorage.setItem('arabi_reports', JSON.stringify(filtered));
+    }
+    closeDeleteModal();
+    await loadReports();
+    if (activeTab==='reports') renderReportsTable();
+    showToast('تم حذف التقرير بنجاح');
+  } catch(e) {
+    showToast('خطأ في الحذف: '+e.message, 'err');
+  } finally {
+    btn.disabled=false;
+    btn.innerHTML='🗑️ نعم، احذف';
+  }
+}
+
+/* ══════════════════════════════════════════
+   DELETE — ALL FILTERED
+══════════════════════════════════════════ */
+function confirmDeleteAll() {
+  if (!filteredForDelete.length) { showToast('لا توجد تقارير لحذفها','err'); return; }
+  document.getElementById('deleteAllLabel').textContent = `سيتم حذف ${filteredForDelete.length} تقرير`;
+  document.getElementById('deleteAllModal').classList.remove('hidden');
+}
+
+async function executeDeleteAll() {
+  document.getElementById('deleteAllModal').classList.add('hidden');
+  showToast(`جاري حذف ${filteredForDelete.length} تقرير...`, 'info');
+  let deleted=0;
+  for (const r of filteredForDelete) {
+    try {
+      if (r._docId && db) await db.collection('reports').doc(r._docId).delete();
+      deleted++;
+    } catch(e) { console.error('Del err:', e); }
+  }
+  await loadReports();
+  renderReportsTable();
+  showToast(`تم حذف ${deleted} تقرير بنجاح`);
+}
+
+/* ══════════════════════════════════════════
+   FILTERS
+══════════════════════════════════════════ */
+function populateFilters() {
+  const branches=[...new Set(reports.map(r=>r.branch).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const agents  =[...new Set(reports.map(r=>r.agent).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  ['rptBranchFilter','secBranchFilter'].forEach(id=>{
+    const el=document.getElementById(id); if (!el) return;
+    const cur=el.value;
+    el.innerHTML=`<option value="">كل الفروع</option>`+branches.map(b=>`<option value="${b}">${b}</option>`).join('');
+    if (cur) el.value=cur;
+  });
+  const agEl=document.getElementById('rptAgentFilter');
+  if (agEl) agEl.innerHTML=`<option value="">كل المندوبين</option>`+agents.map(a=>`<option value="${a}">${a}</option>`).join('');
+
+  // Branch PPT modal select
+  const pptSel=document.getElementById('branchPPTSelect');
+  if (pptSel) pptSel.innerHTML=`<option value="">— اختر الفرع —</option>`+branches.map(b=>`<option value="${b}">${b}</option>`).join('');
+}
+
+function clearFilters() {
+  ['rptBranchFilter','rptAgentFilter','rptTypeFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  renderReportsTable();
+}
+
+/* ══════════════════════════════════════════
+   BRANCH PPT MODAL
+══════════════════════════════════════════ */
+function openBranchPPTModal() {
+  document.getElementById('branchPPTModal').classList.remove('hidden');
+  populateFilters();
+}
+function closeBranchPPTModal() {
+  document.getElementById('branchPPTModal').classList.add('hidden');
+}
+
+function previewBranchPPT() {
+  const branch=document.getElementById('branchPPTSelect').value;
+  const preview=document.getElementById('branchPPTPreview');
+  const btn=document.getElementById('branchPPTExportBtn');
+  if (!branch) { preview.classList.remove('show'); btn.disabled=true; return; }
+  const brRpts=reports.filter(r=>r.branch===branch);
+  const totalA=brRpts.reduce((s,r)=>s+(r._totalArabi||0),0);
+  const totalAll=brRpts.reduce((s,r)=>s+(r._totalAll||0),0);
+  const pct=totalAll>0?+((totalA/totalAll)*100).toFixed(1):0;
+  const newRpts=brRpts.filter(r=>r._isNew);
+  const avgBef=newRpts.length?+(newRpts.reduce((s,r)=>s+(r._pctBefore||0),0)/newRpts.length).toFixed(1):0;
+  const avgAft=newRpts.length?+(newRpts.reduce((s,r)=>s+(r._pctAfter||0),0)/newRpts.length).toFixed(1):0;
+  const secs=calcSectionsData(branch);
+  const agents=[...new Set(brRpts.map(r=>r.agent).filter(Boolean))];
+  document.getElementById('pp_count').textContent=brRpts.length+' تقارير';
+  document.getElementById('pp_pct').textContent=pct+'%';
+  document.getElementById('pp_before').textContent=newRpts.length?avgBef+'%':'—';
+  document.getElementById('pp_after').textContent=newRpts.length?avgAft+'%':'—';
+  document.getElementById('pp_arabi').textContent=totalA.toLocaleString();
+  document.getElementById('pp_total').textContent=totalAll.toLocaleString();
+  document.getElementById('pp_secs').textContent=secs.length+' قسم';
+  document.getElementById('pp_agents').textContent=agents.slice(0,3).join('، ')+(agents.length>3?'...':'');
+  preview.classList.add('show');
+  btn.disabled=false;
+}
+
+async function exportBranchPPT() {
+  const branch=document.getElementById('branchPPTSelect').value;
+  if (!branch) return;
+  closeBranchPPTModal();
+  await exportBranchPPTDirect(branch);
+}
+
+async function exportBranchPPTDirect(branch) {
+  showToast(`جاري إعداد تقرير PPT لفرع ${branch}...`, 'info');
+  const btn=document.getElementById('pptBtn');
+  btn.classList.add('loading');
+  try {
+    const brRpts=reports.filter(r=>r.branch===branch).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+    if (!brRpts.length) { showToast('لا توجد تقارير لهذا الفرع','err'); return; }
+
+    const pptx=new PptxGenJS();
+    pptx.layout='LAYOUT_WIDE';pptx.rtlMode=true;
+    pptx.author='نظام نسب عرض العربي';pptx.subject=`تقرير فرع: ${branch}`;
+
+    const BG='0a1628',DARK='0d1f3a',BLUE='0ea5e9',CYAN='67e8f9',WH='e0f2fe',MT='7dd3fc',GREEN='34d399',YELLOW='fbbf24',RED='f87171';
+    const pCol=p=>p>=50?GREEN:p>=30?YELLOW:RED;
+    const totalA=brRpts.reduce((s,r)=>s+(r._totalArabi||0),0);
+    const totalAll2=brRpts.reduce((s,r)=>s+(r._totalAll||0),0);
+    const pct=totalAll2>0?+((totalA/totalAll2)*100).toFixed(1):0;
+    const newRpts=brRpts.filter(r=>r._isNew);
+    const avgBef=newRpts.length?+(newRpts.reduce((s,r)=>s+(r._pctBefore||0),0)/newRpts.length).toFixed(1):0;
+    const avgAft=newRpts.length?+(newRpts.reduce((s,r)=>s+(r._pctAfter||0),0)/newRpts.length).toFixed(1):0;
+    const delta=+(avgAft-avgBef).toFixed(1);
+    const secs=calcSectionsData(branch);
+    const agents=[...new Set(brRpts.map(r=>r.agent).filter(Boolean))];
+
+    const addHdr=(sl,title)=>{
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:.62,fill:{color:DARK}});
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:.62,w:'100%',h:.04,fill:{color:BLUE}});
+      sl.addText(title,{x:.3,y:.08,w:8,h:.5,fontSize:17,bold:true,color:CYAN,rtlMode:true,valign:'middle'});
+      sl.addText(`فرع: ${branch}`,{x:8,y:.08,w:1.95,h:.5,fontSize:10,color:MT,align:'left',rtlMode:true});
+    };
+
+    // ── SLIDE 1: COVER ──
+    const s1=pptx.addSlide();s1.background={color:BG};
+    s1.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:3.2,fill:{color:DARK}});
+    s1.addShape(pptx.ShapeType.rect,{x:0,y:3.2,w:'100%',h:.05,fill:{color:BLUE}});
+    s1.addText('🏢',{x:4.3,y:.2,w:1.4,h:.9,fontSize:36,align:'center'});
+    s1.addText(`تقرير فرع: ${branch}`,{x:.4,y:1.05,w:9.2,h:.68,fontSize:26,bold:true,color:CYAN,align:'center',rtlMode:true});
+    s1.addText('نظام نسب عرض العربي — تقرير تفصيلي شامل',{x:.4,y:1.76,w:9.2,h:.5,fontSize:13,color:MT,align:'center',rtlMode:true});
+    s1.addShape(pptx.ShapeType.rect,{x:.8,y:2.4,w:8.4,h:.62,fill:{color:BG},line:{color:BLUE,pt:.6}});
+    s1.addText(`التقارير: ${brRpts.length}  |  المندوبون: ${agents.length}  |  متوسط النسبة: ${pct}%  |  الأقسام: ${secs.length}`,{x:.8,y:2.42,w:8.4,h:.58,fontSize:12,color:MT,align:'center',rtlMode:true});
+    const kpis=[[pct+'%','نسبة العرض الكلية',pCol(pct),.3],[brRpts.length+'','إجمالي التقارير',BLUE,2.75],[totalA.toLocaleString(),'منتجات العربي',GREEN,5.2],[secs.length+'','الأقسام',CYAN,7.65]];
+    kpis.forEach(([v,l,col,x])=>{
+      s1.addShape(pptx.ShapeType.rect,{x,y:3.38,w:2.2,h:1.1,fill:{color:DARK},line:{color:col,pt:.4}});
+      s1.addText(v,{x,y:3.45,w:2.2,h:.56,fontSize:22,bold:true,color:col,align:'center',rtlMode:true});
+      s1.addText(l,{x,y:4.04,w:2.2,h:.38,fontSize:10,color:MT,align:'center',rtlMode:true});
+    });
+
+    // ── SLIDE 2: BEFORE VS AFTER ──
+    if (newRpts.length) {
+      const s2=pptx.addSlide();s2.background={color:BG};
+      addHdr(s2,`مقارنة النسب قبل وبعد التحسين — ${branch}`);
+      [[avgBef+'%','متوسط قبل',RED,.3],[avgAft+'%','متوسط بعد',GREEN,3.2],[(delta>0?'+':'')+delta+'%','مقدار التحسن',pCol(pct),6.1]].forEach(([v,l,col,x])=>{
+        s2.addShape(pptx.ShapeType.rect,{x,y:.82,w:3.0,h:1.3,fill:{color:DARK},line:{color:col,pt:.55}});
+        s2.addText(v,{x,y:.92,w:3.0,h:.7,fontSize:28,bold:true,color:col,align:'center',rtlMode:true});
+        s2.addText(l,{x,y:1.65,w:3.0,h:.42,fontSize:11,color:MT,align:'center',rtlMode:true});
+      });
+      const progress=Math.min(pct,100)/100;
+      s2.addShape(pptx.ShapeType.rect,{x:.3,y:2.25,w:9.4,h:.22,fill:{color:BG},line:{color:pCol(pct),pt:.5}});
+      if (progress>0) s2.addShape(pptx.ShapeType.rect,{x:.3,y:2.25,w:9.4*progress,h:.22,fill:{color:pCol(pct)}});
+      s2.addText(`نسبة العرض الإجمالية: ${pct}%`,{x:.3,y:2.52,w:9.4,h:.28,fontSize:10,color:MT,rtlMode:true});
+      const bHdr=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:10}});
+      const baTbl=[[bHdr('المندوب'),bHdr('نسبة قبل'),bHdr('نسبة بعد'),bHdr('الفرق'),bHdr('التاريخ')]];
+      newRpts.slice(0,7).forEach(r=>{
+        const dv=+(r._pctAfter-r._pctBefore).toFixed(1);
+        baTbl.push([
+          {text:r.agent||'—',options:{color:WH,rtlMode:true,fontSize:10}},
+          {text:r._pctBefore+'%',options:{color:RED,bold:true,align:'center',fontSize:11}},
+          {text:r._pctAfter+'%',options:{color:GREEN,bold:true,align:'center',fontSize:11}},
+          {text:(dv>0?'+':'')+dv+'%',options:{color:pCol(r._pctAfter),bold:true,align:'center',fontSize:11}},
+          {text:(r.timestamp||'').slice(0,10),options:{color:MT,align:'center',fontSize:9}},
+        ]);
+      });
+      s2.addTable(baTbl,{x:.3,y:2.88,w:9.4,rowH:.33,fontSize:10,border:{type:'solid',color:BLUE,pt:.3}});
+    }
+
+    // ── SLIDE 3: SECTIONS TABLE ──
+    if (secs.length) {
+      const s3=pptx.addSlide();s3.background={color:BG};
+      addHdr(s3,`تحليل أقسام الفرع: ${branch}`);
+      const shdr=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:10}});
+      const stbl=[[shdr('القسم'),shdr('عربي قبل'),shdr('إجمالي قبل'),shdr('نسبة قبل'),shdr('عربي بعد'),shdr('إجمالي بعد'),shdr('نسبة بعد'),shdr('الفرق')]];
+      secs.forEach(s=>{
+        const dv=+(s.pctAfter-s.pctBefore).toFixed(1);
+        stbl.push([
+          {text:s.label,options:{color:WH,rtlMode:true,fontSize:10}},
+          {text:String(s.arabiB),options:{color:RED,align:'center',fontSize:10}},
+          {text:String(s.totalB),options:{color:MT,align:'center',fontSize:10}},
+          {text:s.pctBefore+'%',options:{color:RED,bold:true,align:'center',fontSize:10}},
+          {text:String(s.arabiA),options:{color:GREEN,align:'center',fontSize:10}},
+          {text:String(s.totalA),options:{color:MT,align:'center',fontSize:10}},
+          {text:s.pctAfter+'%',options:{color:pCol(s.pctAfter),bold:true,align:'center',fontSize:10}},
+          {text:(dv>0?'+':'')+dv+'%',options:{color:dv>0?GREEN:dv<0?RED:CYAN,bold:true,align:'center',fontSize:10}}
+        ]);
+      });
+      s3.addTable(stbl,{x:.3,y:.75,w:9.4,rowH:.33,fontSize:10,border:{type:'solid',color:BLUE,pt:.3}});
+    }
+
+    // ── SLIDE 4: FULL TIMELINE ──
+    const s4=pptx.addSlide();s4.background={color:BG};
+    addHdr(s4,`سجل جميع تقارير فرع: ${branch}`);
+    const thdr=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:10}});
+    const ttbl=[[thdr('#'),thdr('المندوب'),thdr('نسبة قبل'),thdr('نسبة بعد'),thdr('الفرق'),thdr('إجمالي'),thdr('العربي'),thdr('التاريخ')]];
+    brRpts.forEach((r,i)=>{
+      const dv=r._isNew?+(r._pctAfter-r._pctBefore).toFixed(1):null;
+      ttbl.push([
+        {text:String(i+1),options:{color:MT,align:'center',fontSize:10}},
+        {text:r.agent||'—',options:{color:WH,rtlMode:true,fontSize:10}},
+        {text:r._isNew?r._pctBefore+'%':'—',options:{color:RED,align:'center',fontSize:10}},
+        {text:r._pct+'%',options:{color:GREEN,bold:true,align:'center',fontSize:11}},
+        {text:dv!==null?(dv>0?'+':'')+dv+'%':'—',options:{color:dv&&dv>0?GREEN:dv&&dv<0?RED:MT,align:'center',bold:true,fontSize:10}},
+        {text:String(r._totalAll||0),options:{color:MT,align:'center',fontSize:10}},
+        {text:String(r._totalArabi||0),options:{color:MT,align:'center',fontSize:10}},
+        {text:(r.timestamp||'').slice(0,10),options:{color:MT,align:'center',fontSize:9}},
+      ]);
+    });
+    s4.addTable(ttbl,{x:.3,y:.75,w:9.4,rowH:.33,fontSize:10,border:{type:'solid',color:BLUE,pt:.3}});
+
+    // ── SLIDE 5: SUMMARY & AGENTS ──
+    const s5=pptx.addSlide();s5.background={color:BG};
+    addHdr(s5,`ملخص الأداء — فرع: ${branch}`);
+    const f=Math.min(pct,100)/100;
+    s5.addShape(pptx.ShapeType.rect,{x:.3,y:.78,w:9.4,h:.28,fill:{color:BG},line:{color:pCol(pct),pt:.6}});
+    if (f>0) s5.addShape(pptx.ShapeType.rect,{x:.3,y:.78,w:9.4*f,h:.28,fill:{color:pCol(pct)}});
+    s5.addText(`نسبة العرض الإجمالية: ${pct}%`,{x:.3,y:1.1,w:9.4,h:.3,fontSize:11,color:MT,rtlMode:true});
+    const best=secs.sort((a,b)=>b.pctAfter-a.pctAfter)[0];
+    const weak=secs.sort((a,b)=>a.pctAfter-b.pctAfter)[0];
+    [[pct+'%','نسبة العرض الكلية',pCol(pct),.3,1.5],[totalA+'','منتجات العربي',GREEN,2.75,1.5],[brRpts.length+'','التقارير',BLUE,5.2,1.5],[agents.length+'','المندوبون',CYAN,7.65,1.5]].forEach(([v,l,col,x,y])=>{
+      s5.addShape(pptx.ShapeType.rect,{x,y,w:2.2,h:1.0,fill:{color:DARK},line:{color:col,pt:.4}});
+      s5.addText(v,{x,y:y+.1,w:2.2,h:.52,fontSize:21,bold:true,color:col,align:'center',rtlMode:true});
+      s5.addText(l,{x,y:y+.65,w:2.2,h:.3,fontSize:9,color:MT,align:'center',rtlMode:true});
+    });
+    if (best&&weak) {
+      const iHdr=t=>({text:t,options:{bold:true,color:WH,fill:{color:'0d1f3a'},fontSize:10}});
+      const insights=[[iHdr('المؤشر'),iHdr('القيمة'),iHdr('التفاصيل')],[
+        {text:'أفضل قسم',options:{color:MT,rtlMode:true,fontSize:10}},
+        {text:best.pctAfter+'%',options:{color:GREEN,bold:true,align:'center',fontSize:11}},
+        {text:best.label,options:{color:WH,rtlMode:true,fontSize:10}}
+      ],[
+        {text:'أضعف قسم',options:{color:MT,rtlMode:true,fontSize:10}},
+        {text:weak.pctAfter+'%',options:{color:RED,bold:true,align:'center',fontSize:11}},
+        {text:weak.label,options:{color:WH,rtlMode:true,fontSize:10}}
+      ],[
+        {text:'مقدار التحسن',options:{color:MT,rtlMode:true,fontSize:10}},
+        {text:(delta>0?'+':'')+delta+'%',options:{color:pCol(pct),bold:true,align:'center',fontSize:11}},
+        {text:newRpts.length?'من تقارير قبل/بعد':'—',options:{color:MT,rtlMode:true,fontSize:9}}
+      ]];
+      s5.addTable(insights,{x:.3,y:2.62,w:9.4,rowH:.35,fontSize:10,border:{type:'solid',color:BLUE,pt:.3}});
+    }
+    // Agents list
+    if (agents.length) {
+      s5.addText('المندوبون: '+agents.join(' | '),{x:.3,y:3.82,w:9.4,h:.3,fontSize:10,color:MT,rtlMode:true});
+    }
+    s5.addText(new Date().toLocaleDateString('ar-EG'),{x:.3,y:4.15,w:9.4,h:.25,fontSize:9,color:MT,rtlMode:true});
+
+    const fname=`تقرير_فرع_${branch}_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.pptx`;
+    await pptx.writeFile({fileName:fname});
+    showToast(`✅ تم تحميل PPT فرع "${branch}" (5 شرائح)`);
+  } catch(e) {
+    console.error('Branch PPT err:',e);
+    showToast('خطأ في إنشاء PPT: '+e.message,'err');
+  } finally { btn.classList.remove('loading'); }
+}
+
+/* ══════════════════════════════════════════
+   EXCEL EXPORT
+══════════════════════════════════════════ */
+function exportExcel() {
+  const btn=document.getElementById('xlsBtn');
+  btn.classList.add('loading');
+  try {
+    const wb=XLSX.utils.book_new();
+    const rptData=[['الفرع','المندوب','نوع التقرير','نسبة قبل %','نسبة بعد %','الفرق %','إجمالي','عربي','التاريخ']];
+    reports.forEach(r=>{
+      const dv=r._isNew?+(r._pctAfter-r._pctBefore).toFixed(1):'';
+      rptData.push([r.branch||'',r.agent||'',r._isNew?'قبل/بعد':'قديم',r._pctBefore||'',r._pct||'',dv,r._totalAll||0,r._totalArabi||0,r.timestamp||'']);
+    });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rptData),'كل التقارير');
+    const brStats=calcBranchStats();
+    const brData=[['الفرع','نسبة العرض %','عدد التقارير','إجمالي','العربي','التقييم']];
+    brStats.sort((a,b)=>b.pct-a.pct).forEach(b=>{
+      const {label}=ratingInfo(b.pct);
+      brData.push([b.branch,b.pct,b.count,b.totalAll,b.totalArabi,label.replace(/[⭐🌟✅📈]/g,'').trim()]);
+    });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(brData),'إحصاءات الفروع');
+    const secData=calcSectionsData();
+    const secSheet=[['القسم','عربي قبل','إجمالي قبل','نسبة قبل %','عربي بعد','إجمالي بعد','نسبة بعد %','الفرق %']];
+    secData.forEach(s=>secSheet.push([s.label,s.arabiB,s.totalB,s.pctBefore,s.arabiA,s.totalA,s.pctAfter,s.diff]));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(secSheet),'تحليل الأقسام');
+    XLSX.writeFile(wb,`تقرير_نسب_العرض_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.xlsx`);
+    showToast('تم تحميل ملف Excel (3 أوراق)');
+  } catch(e) { showToast('خطأ Excel: '+e.message,'err'); }
+  finally { btn.classList.remove('loading'); }
+}
+
+
+/* ══════════════════════════════════════════
+   منطق تشغيل القائمة المنسدلة
+══════════════════════════════════════════ */
+function toggleDropdown() {
+  document.getElementById("exportDropdown").classList.toggle("show");
+}
+window.onclick = function(e) {
+  const wrap = document.getElementById('exportMenuWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const dropdown = document.getElementById("exportDropdown");
+    if(dropdown) dropdown.classList.remove("show");
+  }
+}
+
+/* ══════════════════════════════════════════
+   🚀 المحرك الاحترافي الذكي لتصدير POWERPOINT
+   (يعتمد على محاكاة الذكاء الاصطناعي وتحليل المبيعات)
+══════════════════════════════════════════ */
+
+const SmartPPTEngine = {
+  // ألوان احترافية (Corporate Theme)
+  colors: {
+    bg: '0B1120',         // خلفية داكنة جداً
+    surface: '1E293B',    // لون الكروت
+    primary: '0EA5E9',    // أزرق العربي
+    accent: '38BDF8',     // أزرق فاتح
+    success: '10B981',    // أخضر للتحسن
+    danger: 'EF4444',     // أحمر للتراجع
+    warning: 'F59E0B',    // برتقالي
+    textMuted: '94A3B8',  // رمادي للنصوص
+    textLight: 'F8FAFC'   // أبيض للنصوص الرئيسية
+  },
+
+  // خوارزمية الذكاء الاصطناعي لتوليد نصوص التحليل
+  generateAIInsights(dataSrc, isBranch, branchName) {
+    const totalA = dataSrc.reduce((s, r) => s + (r._totalArabi || 0), 0);
+    const totalAll = dataSrc.reduce((s, r) => s + (r._totalAll || 0), 0);
+    const newRpts = dataSrc.filter(r => r._isNew);
+    
+    const avgBef = newRpts.length ? +(newRpts.reduce((s, r) => s + (r._pctBefore || 0), 0) / newRpts.length).toFixed(1) : 0;
+    const avgAft = newRpts.length ? +(newRpts.reduce((s, r) => s + (r._pctAfter || 0), 0) / newRpts.length).toFixed(1) : 0;
+    const diff = +(avgAft - avgBef).toFixed(1);
+
+    // نموذج رياضي لتقدير زيادة المبيعات (كل 1% زيادة في العرض = 0.8% زيادة متوقعة في التحويل)
+    const salesImpact = +(diff * 0.8).toFixed(1); 
+
+    let execSummary = "";
+    let recommendations =[];
+
+    const target = isBranch ? `فرع ${branchName}` : "الفروع الإجمالية";
+
+    if (newRpts.length === 0) {
+      return {
+        execSummary: `📌 البيانات الحالية لـ ${target} تعتمد على التقييم المباشر دون وجود بيانات تاريخية للمقارنة (قبل/بعد). متوسط العرض الحالي هو ${avgAft}%.`,
+        salesImpact: 0,
+        recommendations:["إلزام المندوبين برفع تقارير (قبل وبعد) لتفعيل خوارزميات قياس الأداء.", "مراجعة الأقسام ذات النسبة الأقل من 50%."],
+        diff: 0, avgBef, avgAft
+      };
+    }
+
+    if (diff > 5) {
+      execSummary = `📈 أداء استثنائي: أظهر ${target} نمواً ملحوظاً في حصة العرض من ${avgBef}% إلى ${avgAft}%. هذا التحسن القوي بنسبة ${diff}% يعكس تطبيقاً ممتازاً لمعايير الترويج المعتمدة.`;
+      recommendations =[
+        "تعميم قصة نجاح الأقسام المتطورة على باقي الأقسام.",
+        `استغلال الزيادة المتوقعة في فرص البيع (+${salesImpact}%) بتوفير مخزون كافٍ.`,
+        "تكريم المندوبين المسؤولين عن هذا التحسن الملحوظ."
+      ];
+    } else if (diff > 0) {
+      execSummary = `📊 تحسن طفيف: سجل ${target} تحسناً تدريجياً في حصة العرض بزيادة قدرها ${diff}%. الأداء يسير في الاتجاه الصحيح ولكنه يحتاج للمزيد من الجهد للوصول للحصة المستهدفة.`;
+      recommendations =[
+        "تكثيف الزيارات الميدانية للأقسام التي لم تشهد تغييراً.",
+        "الاستفادة من نقاط البيع البصرية (POSM) لدعم المنتجات الضعيفة.",
+        `التأثير على المبيعات يقدر بـ +${salesImpact}%، ويجب مضاعفته.`
+      ];
+    } else if (diff === 0) {
+      execSummary = `⚖️ ركود في الأداء: استقرت حصة العرض لـ ${target} عند ${avgAft}% دون أي تغيير إيجابي أو سلبي. هذا الركود قد يؤدي إلى فقدان الحصة السوقية لصالح المنافسين.`;
+      recommendations =[
+        "عقد اجتماع عاجل مع مسؤولي العرض لمعرفة معوقات التحسين.",
+        "إعادة هيكلة خطة توزيع المنتجات داخل المعرض."
+      ];
+    } else {
+      execSummary = `📉 تراجع مقلق: هناك انخفاض في حصة منتجات العربي من ${avgBef}% إلى ${avgAft}% (تراجع ${Math.abs(diff)}%). هذا الانكماش يمثل خطراً مباشراً على حجم المبيعات.`;
+      recommendations =[
+        "تدخل إداري فوري لمعالجة التمدد للمنافسين على حساب العربي.",
+        `خسارة متوقعة في فرص إتمام البيع تقدر بـ ${Math.abs(salesImpact)}% يجب تداركها.`,
+        "إعادة ترتيب الرفوف وتطبيق سياسة المساحة العادلة."
+      ];
+    }
+
+    return { execSummary, recommendations, salesImpact, diff, avgBef, avgAft, totalA, totalAll };
+  },
+
+async generate(isBranch, branchName = "") {
+    const dataSrc = isBranch ? reports.filter(r => r.branch === branchName) : reports;
+    if (!dataSrc.length) throw new Error("لا توجد بيانات متاحة للتصدير");
+
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_WIDE'; 
+    pptx.rtlMode = true; 
+    pptx.author = 'نظام الذكاء التحليلي - العربي';
+
+    const c = this.colors;
+    const aiData = this.generateAIInsights(dataSrc, isBranch, branchName);
+    const secs = calcSectionsData(isBranch ? branchName : '');
+
+    // -- دالة مساعدة لإنشاء الهيدر الاحترافي --
+    const addHeader = (sl, title, icon = "📊") => {
+      sl.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.8, fill: { color: c.surface } });
+      sl.addShape(pptx.ShapeType.rect, { x: 0, y: 0.8, w: '100%', h: 0.05, fill: { color: c.primary } });
+      sl.addText(`${icon}  ${title}`, { x: 0.5, y: 0.15, w: 9, h: 0.5, fontSize: 20, bold: true, color: c.textLight, rtlMode: true });
+      sl.addText('Araby Group - Retail Analytics', { x: 9.5, y: 0.2, w: 3.3, h: 0.4, fontSize: 10, color: c.textMuted, align: 'right' });
+    };
+
+    // ── الشريحة 1: الغلاف التنفيذي ──
+    const s1 = pptx.addSlide(); 
+    s1.background = { color: c.bg };
+    
+    s1.addShape(pptx.ShapeType.rect, { x: 1, y: 1.5, w: 11.3, h: 4, fill: { color: c.surface }, line: { color: c.primary, pt: 1 } });
+    s1.addText('🤖 تقرير الأداء التحليلي', { x: 1, y: 0.5, w: 11.3, h: 0.8, fontSize: 16, color: c.accent, align: 'center', rtlMode: true });
+    s1.addText(isBranch ? `التحليل الاستراتيجي لفرع: ${branchName}` : 'التحليل الاستراتيجي الشامل للمبيعات والعرض', { x: 1, y: 1.8, w: 11.3, h: 1, fontSize: 36, bold: true, color: c.textLight, align: 'center', rtlMode: true });
+    s1.addText('تم التوليد بواسطة محرك تحليل البيانات', { x: 1, y: 2.8, w: 11.3, h: 0.5, fontSize: 14, color: c.textMuted, align: 'center', rtlMode: true });
+    
+    const kpis =[
+      { v: aiData.avgAft + '%', l: 'متوسط العرض الحالي', col: aiData.avgAft >= 50 ? c.success : aiData.avgAft >= 30 ? c.warning : c.danger, x: 1.5 },
+      { v: (aiData.diff > 0 ? '+' : '') + aiData.diff + '%', l: 'معدل التطور', col: aiData.diff > 0 ? c.success : aiData.diff < 0 ? c.danger : c.accent, x: 4.8 },
+      { v: aiData.totalA.toLocaleString(), l: 'إجمالي منتجات العربي', col: c.primary, x: 8.1 }
+    ];
+    
+    kpis.forEach(k => {
+      s1.addShape(pptx.ShapeType.roundRect, { x: k.x, y: 4, w: 3, h: 1.2, r: 0.1, fill: { color: c.bg }, line: { color: k.col, pt: 1 } });
+      s1.addText(k.v, { x: k.x, y: 4.1, w: 3, h: 0.6, fontSize: 28, bold: true, color: k.col, align: 'center' });
+      s1.addText(k.l, { x: k.x, y: 4.7, w: 3, h: 0.4, fontSize: 11, color: c.textMuted, align: 'center', rtlMode: true });
+    });
+
+    // ── الشريحة 2: الملخص التنفيذي وتأثير المبيعات ──
+    const s2 = pptx.addSlide(); 
+    s2.background = { color: c.bg };
+    addHeader(s2, "الملخص التنفيذي وتأثير المبيعات المتوقع", "🧠");
+
+    s2.addShape(pptx.ShapeType.rect, { x: 0.5, y: 1.2, w: 12.3, h: 1.5, fill: { color: c.surface } });
+    s2.addText(aiData.execSummary, { x: 0.7, y: 1.3, w: 11.9, h: 1.3, fontSize: 16, color: c.textLight, rtlMode: true, align: 'justify', lineSpacing: 24 });
+
+    s2.addShape(pptx.ShapeType.roundRect, { x: 0.5, y: 3, w: 5.5, h: 3.5, r: 0.1, fill: { color: c.surface }, line: { color: aiData.salesImpact > 0 ? c.success : aiData.salesImpact < 0 ? c.danger : c.warning, pt: 1.5 } });
+    s2.addText('💰 تأثير العرض على المبيعات المتوقعة', { x: 0.7, y: 3.2, w: 5.1, h: 0.5, fontSize: 16, bold: true, color: c.accent, rtlMode: true });
+    
+    s2.addChart(pptx.charts.DOUGHNUT,[
+      { name: "التأثير", labels:["نسبة التحويل", "عوامل أخرى"], values:[Math.abs(aiData.salesImpact) || 1, 100 - (Math.abs(aiData.salesImpact) || 1)] }
+    ], { 
+      x: 1, y: 3.8, w: 4.5, h: 2.5, 
+      chartColors:[aiData.salesImpact > 0 ? c.success : aiData.salesImpact < 0 ? c.danger : c.warning, c.bg], 
+      holeSize: 70, showLegend: false, dataLabelColor: c.textLight 
+    });
+    s2.addText((aiData.salesImpact > 0 ? '+' : '') + aiData.salesImpact + '%', { x: 1, y: 4.5, w: 4.5, h: 1, fontSize: 32, bold: true, color: aiData.salesImpact > 0 ? c.success : aiData.salesImpact < 0 ? c.danger : c.warning, align: 'center' });
+
+    s2.addShape(pptx.ShapeType.rect, { x: 6.5, y: 3, w: 6.3, h: 3.5, fill: { color: c.surface } });
+    s2.addText('🎯 توصيات النظام الاستراتيجية:', { x: 6.7, y: 3.2, w: 5.9, h: 0.5, fontSize: 16, bold: true, color: c.warning, rtlMode: true });
+    const recText = aiData.recommendations.map(r => `• ${r}`).join('\n\n');
+    s2.addText(recText, { x: 6.7, y: 3.8, w: 5.9, h: 2.5, fontSize: 14, color: c.textLight, rtlMode: true, valign: 'top' });
+
+    // ── الشريحة 3: إحصائيات الفروع (الجديدة كلياً) ──
+    const s3 = pptx.addSlide();
+    s3.background = { color: c.bg };
+    
+    if (!isBranch) {
+      // حالة التقرير الشامل: مقارنة جميع الفروع
+      addHeader(s3, "مقارنة أداء جميع الفروع (إحصائيات شاملة)", "🏢");
+      
+      // تجهيز بيانات الفروع
+      const branchMap = {};
+      dataSrc.forEach(r => {
+        if (!r.branch) return;
+        if (!branchMap[r.branch]) branchMap[r.branch] = { branch: r.branch, count: 0, totalA: 0, totalAll: 0, newRpts: [] };
+        branchMap[r.branch].count++;
+        branchMap[r.branch].totalA += (r._totalArabi || 0);
+        branchMap[r.branch].totalAll += (r._totalAll || 0);
+        if (r._isNew) branchMap[r.branch].newRpts.push(r);
+      });
+      
+      const branchStats = Object.values(branchMap).map(b => {
+        const pct = b.totalAll > 0 ? +((b.totalA / b.totalAll) * 100).toFixed(1) : 0;
+        const avgB = b.newRpts.length ? +(b.newRpts.reduce((s, r) => s + (r._pctBefore || 0), 0) / b.newRpts.length).toFixed(1) : 0;
+        const avgA = b.newRpts.length ? +(b.newRpts.reduce((s, r) => s + (r._pctAfter || 0), 0) / b.newRpts.length).toFixed(1) : 0;
+        return { ...b, pct, avgB, avgA, diff: +(avgA - avgB).toFixed(1) };
+      }).sort((a, b) => b.pct - a.pct); // ترتيب من الأفضل للأسوأ
+
+      // رسم بياني مصغر لأفضل الفروع
+      const topBranches = branchStats.slice(0, 8);
+      s3.addChart(pptx.charts.BAR,[
+        { name: 'نسبة العرض', labels: topBranches.map(b => b.branch), values: topBranches.map(b => b.pct) }
+      ], {
+        x: 0.5, y: 1.2, w: 12.3, h: 2.2, chartColors: [c.primary],
+        showLegend: false, dataLabelColor: c.textLight,
+        catAxisLabelColor: c.textLight, valAxisLabelColor: c.textLight, valAxisMaxVal: 100,
+        title: 'أفضل الفروع أداءً (النسبة النهائية)', showTitle: true, titleColor: c.accent, titleFontSize: 12
+      });
+
+      // جدول الفروع
+      const thB = t => ({ text: t, options: { bold: true, color: c.textLight, fill: { color: c.surface }, fontSize: 11, align: 'center' } });
+      const bRows = [[thB('الفرع'), thB('عدد التقارير'), thB('نسبة قبل'), thB('نسبة بعد'), thB('النسبة النهائية'), thB('التطور')]];
+      
+      branchStats.slice(0, 7).forEach((b, i) => {
+        const rowBg = i % 2 === 0 ? '0B1120' : '111827';
+        const tOpt = { color: c.textLight, fill: { color: rowBg }, fontSize: 10, align: 'center' };
+        const dc = b.diff > 0 ? c.success : b.diff < 0 ? c.danger : c.textMuted;
+        bRows.push([
+          { text: b.branch, options: { ...tOpt, rtlMode: true, bold: true, color: c.accent } },
+          { text: String(b.count), options: tOpt },
+          { text: b.avgB ? b.avgB + '%' : '—', options: { ...tOpt, color: c.danger } },
+          { text: b.avgA ? b.avgA + '%' : '—', options: { ...tOpt, color: c.success } },
+          { text: b.pct + '%', options: { ...tOpt, bold: true, color: b.pct >= 50 ? c.success : c.danger } },
+          { text: b.newRpts.length ? (b.diff > 0 ? '+' : '') + b.diff + '%' : '—', options: { ...tOpt, bold: true, color: dc } }
+        ]);
+      });
+      s3.addTable(bRows, { x: 0.5, y: 3.6, w: 12.3, rowH: 0.4, border: { type: 'solid', color: c.surface, pt: 1 } });
+
+    } else {
+      // حالة تقرير الفرع الواحد: أداء المندوبين وسجل التقارير
+      addHeader(s3, `سجل التقارير وأداء المندوبين - فرع ${branchName}`, "👤");
+      
+      const sortedRpts = [...dataSrc].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 10);
+      
+      const thA = t => ({ text: t, options: { bold: true, color: c.textLight, fill: { color: c.surface }, fontSize: 12, align: 'center' } });
+      const aRows = [[thA('المندوب'), thA('التاريخ'), thA('النوع'), thA('نسبة قبل'), thA('نسبة بعد'), thA('الفرق')]];
+
+      sortedRpts.forEach((r, i) => {
+        const rowBg = i % 2 === 0 ? '0B1120' : '111827';
+        const tOpt = { color: c.textLight, fill: { color: rowBg }, fontSize: 11, align: 'center' };
+        const diff = r._isNew ? +(r._pctAfter - r._pctBefore).toFixed(1) : null;
+        const dc = diff > 0 ? c.success : diff < 0 ? c.danger : c.textMuted;
+        
+        aRows.push([
+          { text: r.agent || 'غير محدد', options: { ...tOpt, rtlMode: true, bold: true, color: c.accent } },
+          { text: r.timestamp ? r.timestamp.slice(0,10) : '—', options: tOpt },
+          { text: r._isNew ? 'قبل وبعد' : 'عادي', options: { ...tOpt, color: r._isNew ? c.primary : c.textMuted } },
+          { text: r._isNew ? r._pctBefore + '%' : '—', options: { ...tOpt, color: c.danger } },
+          { text: r._pct + '%', options: { ...tOpt, color: c.success, bold: true } },
+          { text: diff !== null ? (diff > 0 ? '+' : '') + diff + '%' : '—', options: { ...tOpt, bold: true, color: dc } }
+        ]);
+      });
+      
+      s3.addShape(pptx.ShapeType.rect, { x: 0.5, y: 1.2, w: 12.3, h: 0.6, fill: { color: c.surface } });
+      s3.addText(`يعرض هذا الجدول أحدث ${sortedRpts.length} تقارير تم رفعها للفرع لمتابعة نشاط المندوبين.`, { x: 0.7, y: 1.25, w: 11.9, h: 0.5, fontSize: 12, color: c.textMuted, rtlMode: true });
+      s3.addTable(aRows, { x: 0.5, y: 2.0, w: 12.3, rowH: 0.5, border: { type: 'solid', color: c.surface, pt: 1 } });
+    }
+
+    // ── الشريحة 4: التحليل المقارن للأقسام (Data Visualization) ──
+    if (secs.length > 0) {
+      const s4 = pptx.addSlide(); 
+      s4.background = { color: c.bg };
+      addHeader(s4, "مقارنة الأداء حسب القسم (قبل / بعد)", "📈");
+
+      s4.addChart(pptx.charts.BAR,[
+        { name: 'قبل التحسين', labels: secs.map(s => s.label), values: secs.map(s => s.pctBefore) },
+        { name: 'بعد التحسين', labels: secs.map(s => s.label), values: secs.map(s => s.pctAfter) }
+      ], { 
+        x: 0.5, y: 1.2, w: 12.3, h: 3.5, 
+        chartColors: [c.danger, c.success], 
+        showLegend: true, legendPos: 'b', legendColor: c.textLight,
+        valAxisMaxVal: 100, valGridLine: { color: c.surface },
+        dataLabelColor: c.textLight, dataLabelFontSize: 10,
+        catAxisLabelColor: c.textLight, valAxisLabelColor: c.textLight
+      });
+
+      const sortedSecs = [...secs].sort((a,b) => (b.pctAfter-b.pctBefore) - (a.pctAfter-a.pctBefore));
+      const best = sortedSecs[0];
+      const worst = sortedSecs[sortedSecs.length - 1];
+      
+      if(best && worst) {
+        s4.addShape(pptx.ShapeType.rect, { x: 0.5, y: 5.0, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.success, pt: 2 } });
+        s4.addText(`🏆 أفضل قسم تطوراً: ${best.label} (+${+(best.pctAfter-best.pctBefore).toFixed(1)}%)`, { x: 0.6, y: 5.3, w: 5.8, h: 0.6, fontSize: 14, bold: true, color: c.success, rtlMode: true, align: 'center' });
+
+        s4.addShape(pptx.ShapeType.rect, { x: 6.8, y: 5.0, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.danger, pt: 2 } });
+        s4.addText(`⚠️ قسم يحتاج متابعة: ${worst.label} (${+(worst.pctAfter-worst.pctBefore).toFixed(1)}%)`, { x: 6.9, y: 5.3, w: 5.8, h: 0.6, fontSize: 14, bold: true, color: c.danger, rtlMode: true, align: 'center' });
+      }
+    }
+
+    // ── الشريحة 5: جدول البيانات التفصيلي ──
+    if (secs.length > 0) {
+      const s5 = pptx.addSlide(); 
+      s5.background = { color: c.bg };
+      addHeader(s5, "جدول بيانات الأقسام التفصيلي", "📋");
+
+      const th = t => ({ text: t, options: { bold: true, color: c.textLight, fill: { color: c.surface }, fontSize: 12, align: 'center' } });
+      const rows = [[th('القسم'), th('إجمالي المنتجات'), th('منتجات العربي'), th('النسبة قبل'), th('النسبة بعد'), th('التطور')]];
+      
+      secs.forEach((s, i) => {
+        const d = +(s.pctAfter - s.pctBefore).toFixed(1);
+        const dc = d > 0 ? c.success : d < 0 ? c.danger : c.textMuted;
+        const rowBg = i % 2 === 0 ? '0B1120' : '111827';
+        const tOpt = { color: c.textLight, fill: { color: rowBg }, fontSize: 11, align: 'center' };
+        
+        rows.push([
+          { text: s.label, options: { ...tOpt, rtlMode: true, bold: true } },
+          { text: String(s.totalA), options: tOpt },
+          { text: String(s.arabiA), options: tOpt },
+          { text: s.pctBefore + '%', options: { ...tOpt, color: c.danger } },
+          { text: s.pctAfter + '%', options: { ...tOpt, color: c.success, bold: true } },
+          { text: (d > 0 ? '+' : '') + d + '%', options: { ...tOpt, color: dc, bold: true } }
+        ]);
+      });
+      s5.addTable(rows, { x: 0.5, y: 1.2, w: 12.3, rowH: 0.5, border: { type: 'solid', color: c.surface, pt: 1 } });
+    }
+
+    // تصدير الملف النهائي
+    const fname = isBranch 
+      ? `تقرير_ذكي_فرع_${branchName}_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.pptx` 
+      : `تقرير_ذكي_شامل_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.pptx`;
+    
+    await pptx.writeFile({ fileName: fname });
+  }
+};
+
+// ==========================================
+// ربط المحرك الجديد بأزرار واجهة المستخدم
+// ==========================================
+
+async function exportBranchPPT() { 
+  const br = document.getElementById('branchPPTSelect').value; 
+  if(!br) return;
+  closeBranchPPTModal(); 
+  await exportBranchPPTDirect(br); 
+}
+
+async function exportBranchPPTDirect(branch) {
+  const btn = document.getElementById('pptBranchBtn');
+  if(btn) btn.classList.add('loading');
+  showToast(`جاري تحليل وإعداد PPT لفرع ${branch}...`, 'info');
+  try {
+    await SmartPPTEngine.generate(true, branch);
+    showToast(`✅ تم تحميل التقرير الذكي لفرع "${branch}"`);
+  } catch(e) { 
+    showToast('خطأ: ' + e.message, 'err'); 
+    console.error(e);
+  } finally { 
+    if(btn) btn.classList.remove('loading'); 
+  }
+}
+
+async function exportPPT() {
+  const btn = document.getElementById('pptBtn');
+  if(btn) btn.classList.add('loading');
+  showToast('جاري تشغيل محرك الذكاء لإنشاء التقرير الشامل...', 'info');
+  try {
+    await SmartPPTEngine.generate(false);
+    showToast('✅ تم تحميل التقرير الاستراتيجي الشامل بنجاح');
+  } catch(e) { 
+    showToast('خطأ: ' + e.message, 'err'); 
+    console.error(e);
+  } finally { 
+    if(btn) btn.classList.remove('loading'); 
+  }
+}
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+let _tt=null;
+function showToast(msg,type='ok') {
+  const t=document.getElementById('toast');
+  if (_tt){clearTimeout(_tt);t.classList.remove('show');void t.offsetWidth;}
+  t.textContent=(type==='ok'?'✅ ':type==='info'?'ℹ️ ':'❌ ')+msg;
+  t.className='toast'+(type==='err'?' err':type==='info'?' info':'');
+  void t.offsetWidth;
+  t.classList.add('show');
+  _tt=setTimeout(()=>{t.classList.remove('show');_tt=null;},3500);
+}
+</script>
+</body>
+</html>
