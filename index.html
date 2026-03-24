@@ -1852,21 +1852,21 @@ window.onclick = function(e) {
 ══════════════════════════════════════════ */
 
 const SmartPPTEngine = {
-  // ألوان احترافية (Corporate Theme)
+  // 🎨 هوية العربي جروب الرسمية (Corporate Light Theme)
   colors: {
-    bg: '0B1120',         // خلفية داكنة جداً
-    surface: '1E293B',    // لون الكروت
-    primary: '0EA5E9',    // أزرق العربي
-    accent: '38BDF8',     // أزرق فاتح
-    success: '10B981',    // أخضر للتحسن
-    danger: 'EF4444',     // أحمر للتراجع
-    warning: 'F59E0B',    // برتقالي
-    textMuted: '94A3B8',  // رمادي للنصوص
-    textLight: 'F8FAFC'   // أبيض للنصوص الرئيسية
+    bg: 'FFFFFF',         // أبيض نقي للخلفية
+    surface: 'F8F9FA',    // رمادي فاتح جداً للكروت
+    primary: 'DA291C',    // أحمر العربي الرسمي
+    darkRed: '8B0000',    // أحمر داكن للعناوين
+    success: '059669',    // أخضر للتحسن
+    danger: 'DC2626',     // أحمر للتراجع
+    warning: 'D97706',    // برتقالي
+    textDark: '1F2937',   // أسود/رمادي داكن للنصوص الرئيسية
+    textMuted: '6B7280',  // رمادي للنصوص الثانوية
+    border: 'E5E7EB'      // لون الحدود
   },
 
-  // خوارزمية الذكاء الاصطناعي لتوليد نصوص التحليل
-generateAIInsights(dataSrc, isBranch, branchName) {
+  generateAIInsights(dataSrc, isBranch, branchName) {
     const totalA = dataSrc.reduce((s, r) => s + (r._totalArabi || 0), 0);
     const totalAll = dataSrc.reduce((s, r) => s + (r._totalAll || 0), 0);
     const newRpts = dataSrc.filter(r => r._isNew);
@@ -1876,17 +1876,19 @@ generateAIInsights(dataSrc, isBranch, branchName) {
     const diff = +(avgAft - avgBef).toFixed(1);
 
     const salesImpact = +(diff * 0.8).toFixed(1); 
+    const uniqueBranches = [...new Set(dataSrc.map(r => r.branch).filter(Boolean))].length;
+    const uniqueAgents = [...new Set(dataSrc.map(r => r.agent).filter(Boolean))].length;
 
     let execSummary = "";
     let recommendations = [];
-    const target = isBranch ? `فرع ${branchName}` : "الفروع الإجمالية";
+    const target = isBranch ? `فرع ${branchName}` : "مجموعة الفروع الإجمالية";
 
     if (newRpts.length === 0) {
       return {
-        execSummary: `📌 البيانات الحالية لـ ${target} تعتمد على التقييم المباشر دون وجود بيانات تاريخية للمقارنة (قبل/بعد). متوسط العرض الحالي هو ${avgAft}%.`,
+        execSummary: `📌 البيانات الحالية لـ ${target} تعتمد على التقييم المباشر دون بيانات تاريخية. متوسط العرض الحالي لمنتجات العربي هو ${avgAft}%.`,
         salesImpact: 0,
-        recommendations: ["إلزام المندوبين برفع تقارير (قبل وبعد) لتفعيل خوارزميات قياس الأداء.", "مراجعة الأقسام ذات النسبة الأقل من 50%."],
-        diff: 0, avgBef, avgAft, totalA, totalAll
+        recommendations: ["تفعيل تقارير (قبل وبعد) لقياس الأداء بدقة.", "مراجعة الأقسام ذات النسبة الأقل من 50%."],
+        diff: 0, avgBef, avgAft, totalA, totalAll, uniqueBranches, uniqueAgents, rptsCount: dataSrc.length
       };
     }
 
@@ -1895,8 +1897,7 @@ generateAIInsights(dataSrc, isBranch, branchName) {
       recommendations = ["تعميم قصة نجاح الأقسام المتطورة على باقي الأقسام.", `استغلال الزيادة المتوقعة في فرص البيع (+${salesImpact}%) بتوفير مخزون كافٍ.`];
     } else if (diff > 0) {
       execSummary = `📊 تحسن طفيف: سجل ${target} تحسناً تدريجياً في حصة العرض بزيادة قدرها ${diff}%. الأداء يسير في الاتجاه الصحيح ولكنه يحتاج للمزيد من الجهد.`;
-      recommendations = ["تكثيف الزيارات الميدانية للأقسام التي لم تشهد تغييراً.", "الاستفادة من نقاط البيع البصرية (POSM) لدعم المنتجات."];
-    // التعديل الرئيسي هنا لمعالجة الثبات وعدم التغير
+      recommendations = ["تكثيف الزيارات الميدانية للأقسام التي لم تشهد تغييراً.", "الاستفادة من نقاط البيع البصرية لدعم المنتجات."];
     } else if (diff === 0) {
       execSummary = `⚖️ ثبات واستقرار تام: استقرت حصة العرض لـ ${target} عند ${avgAft}% دون حدوث أي تغيير إيجابي أو سلبي (الفارق 0%). يتطلب ذلك تغيير تكتيكات العرض.`;
       recommendations = ["مراجعة أسباب عدم تحقيق أي تقدم رغم الزيارات الميدانية.", "إعادة التفاوض على المساحات مع إدارة المعرض لكسر حالة الثبات."];
@@ -1905,85 +1906,98 @@ generateAIInsights(dataSrc, isBranch, branchName) {
       recommendations = ["تدخل إداري فوري لمعالجة التمدد للمنافسين على حساب العربي.", "إعادة ترتيب الرفوف وتطبيق سياسة المساحة العادلة فوراً."];
     }
 
-    return { execSummary, recommendations, salesImpact, diff, avgBef, avgAft, totalA, totalAll };
+    return { execSummary, recommendations, salesImpact, diff, avgBef, avgAft, totalA, totalAll, uniqueBranches, uniqueAgents, rptsCount: dataSrc.length };
   },
 
-async generate(isBranch, branchName = "") {
+  async generate(isBranch, branchName = "") {
     const dataSrc = isBranch ? reports.filter(r => r.branch === branchName) : reports;
     if (!dataSrc.length) throw new Error("لا توجد بيانات متاحة للتصدير");
 
     const pptx = new PptxGenJS();
     pptx.layout = 'LAYOUT_WIDE'; 
     pptx.rtlMode = true; 
-    pptx.author = 'نظام الذكاء التحليلي - العربي';
+    pptx.author = 'مجموعة العربي - قطاع المبيعات';
 
     const c = this.colors;
     const aiData = this.generateAIInsights(dataSrc, isBranch, branchName);
     const secs = calcSectionsData(isBranch ? branchName : '');
+    const currentDate = new Date().toLocaleDateString('ar-EG');
 
-    // -- دالة مساعدة لإنشاء الهيدر الاحترافي --
-    const addHeader = (sl, title, icon = "📊") => {
-      sl.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.8, fill: { color: c.surface } });
+    // ── هيدر وفوتر بالهوية البصرية للعربي ──
+    const addHeaderAndFooter = (sl, title, icon = "📊", slideNum) => {
+      // Header
+      sl.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.8, fill: { color: c.bg } });
       sl.addShape(pptx.ShapeType.rect, { x: 0, y: 0.8, w: '100%', h: 0.05, fill: { color: c.primary } });
-      sl.addText(`${icon}  ${title}`, { x: 0.5, y: 0.15, w: 9, h: 0.5, fontSize: 20, bold: true, color: c.textLight, rtlMode: true });
-      sl.addText('Araby Group - Retail Analytics', { x: 9.5, y: 0.2, w: 3.3, h: 0.4, fontSize: 10, color: c.textMuted, align: 'right' });
+      sl.addText(`${title}  ${icon}`, { x: 0.5, y: 0.15, w: 9, h: 0.5, fontSize: 22, bold: true, color: c.primary, rtlMode: true, align: 'right' });
+      sl.addText('El Araby Group', { x: 0.5, y: 0.2, w: 3, h: 0.4, fontSize: 14, bold: true, color: c.darkRed, align: 'left' });
+      
+      // Footer
+      sl.addShape(pptx.ShapeType.rect, { x: 0, y: 7.1, w: '100%', h: 0.02, fill: { color: c.border } });
+      sl.addText('سري وخاص - للاستخدام الداخلي فقط', { x: 8.8, y: 7.15, w: 4, h: 0.3, fontSize: 10, color: c.primary, rtlMode: true, bold: true, align: 'right' });
+      sl.addText(`تاريخ التقرير: ${currentDate}`, { x: 4.5, y: 7.15, w: 4.3, h: 0.3, fontSize: 10, color: c.textMuted, align: 'center', rtlMode: true });
+      sl.addText(`شريحة ${slideNum}`, { x: 0.5, y: 7.15, w: 3.3, h: 0.3, fontSize: 10, color: c.textMuted, align: 'left', rtlMode: true });
     };
 
     // ── الشريحة 1: الغلاف التنفيذي ──
     const s1 = pptx.addSlide(); 
     s1.background = { color: c.bg };
     
-    s1.addShape(pptx.ShapeType.rect, { x: 1, y: 1.5, w: 11.3, h: 4, fill: { color: c.surface }, line: { color: c.primary, pt: 1 } });
-    s1.addText('🤖 تقرير الأداء التحليلي', { x: 1, y: 0.5, w: 11.3, h: 0.8, fontSize: 16, color: c.accent, align: 'center', rtlMode: true });
-    s1.addText(isBranch ? `التحليل الاستراتيجي لفرع: ${branchName}` : 'التحليل الاستراتيجي الشامل للمبيعات والعرض', { x: 1, y: 1.8, w: 11.3, h: 1, fontSize: 36, bold: true, color: c.textLight, align: 'center', rtlMode: true });
-    s1.addText('تم التوليد بواسطة محرك تحليل البيانات', { x: 1, y: 2.8, w: 11.3, h: 0.5, fontSize: 14, color: c.textMuted, align: 'center', rtlMode: true });
+    // شريط علوي سميك للعربي
+    s1.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.4, fill: { color: c.primary } });
     
-    const kpis =[
-      { v: aiData.avgAft + '%', l: 'متوسط العرض الحالي', col: aiData.avgAft >= 50 ? c.success : aiData.avgAft >= 30 ? c.warning : c.danger, x: 1.5 },
-      { v: (aiData.diff > 0 ? '+' : '') + aiData.diff + '%', l: 'معدل التطور', col: aiData.diff > 0 ? c.success : aiData.diff < 0 ? c.danger : c.accent, x: 4.8 },
-      { v: aiData.totalA.toLocaleString(), l: 'إجمالي منتجات العربي', col: c.primary, x: 8.1 }
+    s1.addText('مجموعة العربي', { x: 0.5, y: 0.8, w: 12.3, h: 0.8, fontSize: 24, bold: true, color: c.primary, align: 'center', rtlMode: true });
+    s1.addText(isBranch ? `التحليل الاستراتيجي لنسب العرض - فرع: ${branchName}` : 'التحليل الاستراتيجي الشامل لنسب العرض بالفروع', { x: 0.5, y: 1.6, w: 12.3, h: 1, fontSize: 36, bold: true, color: c.textDark, align: 'center', rtlMode: true });
+    s1.addText(`مبني على تحليل ${aiData.rptsCount} تقرير ميداني بواسطة ${aiData.uniqueAgents} مندوب مبيعات`, { x: 0.5, y: 2.6, w: 12.3, h: 0.5, fontSize: 14, color: c.textMuted, align: 'center', rtlMode: true });
+    
+    // KPIs
+    const kpis = [
+      { v: aiData.avgAft + '%', l: 'متوسط العرض الحالي', col: aiData.avgAft >= 50 ? c.success : aiData.avgAft >= 30 ? c.warning : c.danger, x: 9.7 },
+      { v: (aiData.diff > 0 ? '+' : '') + aiData.diff + '%', l: 'معدل التطور', col: aiData.diff > 0 ? c.success : aiData.diff < 0 ? c.danger : c.textMuted, x: 6.8 },
+      { v: aiData.totalA.toLocaleString(), l: 'إجمالي منتجات العربي', col: c.primary, x: 3.9 },
+      { v: String(isBranch ? aiData.uniqueAgents : aiData.uniqueBranches), l: isBranch ? 'مندوبين بالفرع' : 'إجمالي الفروع', col: c.textDark, x: 1.0 }
     ];
     
     kpis.forEach(k => {
-      s1.addShape(pptx.ShapeType.roundRect, { x: k.x, y: 4, w: 3, h: 1.2, r: 0.1, fill: { color: c.bg }, line: { color: k.col, pt: 1 } });
-      s1.addText(k.v, { x: k.x, y: 4.1, w: 3, h: 0.6, fontSize: 28, bold: true, color: k.col, align: 'center' });
-      s1.addText(k.l, { x: k.x, y: 4.7, w: 3, h: 0.4, fontSize: 11, color: c.textMuted, align: 'center', rtlMode: true });
+      s1.addShape(pptx.ShapeType.roundRect, { x: k.x, y: 4.0, w: 2.6, h: 1.4, r: 0.1, fill: { color: c.surface }, line: { color: c.border, pt: 1 } });
+      s1.addText(k.v, { x: k.x, y: 4.2, w: 2.6, h: 0.6, fontSize: 32, bold: true, color: k.col, align: 'center' });
+      s1.addText(k.l, { x: k.x, y: 4.9, w: 2.6, h: 0.4, fontSize: 12, bold: true, color: c.textDark, align: 'center', rtlMode: true });
     });
+    
+    s1.addShape(pptx.ShapeType.rect, { x: 0, y: 7.0, w: '100%', h: 0.5, fill: { color: c.textDark } });
+    s1.addText('سري وخاص - الإدارة العليا للمبيعات', { x: 0, y: 7.05, w: '100%', h: 0.4, fontSize: 12, color: 'FFFFFF', align: 'center', rtlMode: true });
 
-    // ── الشريحة 2: الملخص التنفيذي وتأثير المبيعات ──
+    // ── الشريحة 2: الملخص التنفيذي ──
     const s2 = pptx.addSlide(); 
     s2.background = { color: c.bg };
-    addHeader(s2, "الملخص التنفيذي وتأثير المبيعات المتوقع", "🧠");
+    addHeaderAndFooter(s2, "الملخص التنفيذي وتأثير المبيعات المتوقع", "🧠", 2);
 
-    s2.addShape(pptx.ShapeType.rect, { x: 0.5, y: 1.2, w: 12.3, h: 1.5, fill: { color: c.surface } });
-    s2.addText(aiData.execSummary, { x: 0.7, y: 1.3, w: 11.9, h: 1.3, fontSize: 16, color: c.textLight, rtlMode: true, align: 'justify', lineSpacing: 24 });
+    s2.addShape(pptx.ShapeType.rect, { x: 0.5, y: 1.2, w: 12.3, h: 1.5, fill: { color: c.surface }, line: { color: c.border, pt: 1 } });
+    s2.addText(aiData.execSummary, { x: 0.7, y: 1.3, w: 11.9, h: 1.3, fontSize: 18, color: c.textDark, rtlMode: true, align: 'right', lineSpacing: 28 });
 
-    s2.addShape(pptx.ShapeType.roundRect, { x: 0.5, y: 3, w: 5.5, h: 3.5, r: 0.1, fill: { color: c.surface }, line: { color: aiData.salesImpact > 0 ? c.success : aiData.salesImpact < 0 ? c.danger : c.warning, pt: 1.5 } });
-    s2.addText('💰 تأثير العرض على المبيعات المتوقعة', { x: 0.7, y: 3.2, w: 5.1, h: 0.5, fontSize: 16, bold: true, color: c.accent, rtlMode: true });
+    s2.addShape(pptx.ShapeType.rect, { x: 7.3, y: 3.0, w: 5.5, h: 3.8, fill: { color: c.surface }, line: { color: c.border, pt: 1 } });
+    s2.addText('💰 التأثير على المبيعات (قابل للتعديل عبر Excel)', { x: 7.5, y: 3.2, w: 5.1, h: 0.5, fontSize: 14, bold: true, color: c.primary, rtlMode: true, align: 'right' });
     
-    s2.addChart(pptx.charts.DOUGHNUT,[
-      { name: "التأثير", labels:["نسبة التحويل", "عوامل أخرى"], values:[Math.abs(aiData.salesImpact) || 1, 100 - (Math.abs(aiData.salesImpact) || 1)] }
+    // هذا الرسم البياني مرتبط بملف إكسيل داخلي بالباوربوينت
+    s2.addChart(pptx.charts.DOUGHNUT, [
+      { name: "بيانات المبيعات", labels: ["نمو متوقع بناءً على العرض", "عوامل سوقية أخرى"], values: [Math.abs(aiData.salesImpact) || 1, 100 - (Math.abs(aiData.salesImpact) || 1)] }
     ], { 
-      x: 1, y: 3.8, w: 4.5, h: 2.5, 
-      chartColors:[aiData.salesImpact > 0 ? c.success : aiData.salesImpact < 0 ? c.danger : c.warning, c.bg], 
-      holeSize: 70, showLegend: false, dataLabelColor: c.textLight 
+      x: 7.8, y: 3.8, w: 4.5, h: 2.5, 
+      chartColors: [aiData.salesImpact > 0 ? c.success : aiData.salesImpact < 0 ? c.danger : c.warning, c.border], 
+      holeSize: 65, showLegend: true, legendPos: 'b', dataLabelColor: c.textDark 
     });
-    s2.addText((aiData.salesImpact > 0 ? '+' : '') + aiData.salesImpact + '%', { x: 1, y: 4.5, w: 4.5, h: 1, fontSize: 32, bold: true, color: aiData.salesImpact > 0 ? c.success : aiData.salesImpact < 0 ? c.danger : c.warning, align: 'center' });
 
-    s2.addShape(pptx.ShapeType.rect, { x: 6.5, y: 3, w: 6.3, h: 3.5, fill: { color: c.surface } });
-    s2.addText('🎯 توصيات النظام الاستراتيجية:', { x: 6.7, y: 3.2, w: 5.9, h: 0.5, fontSize: 16, bold: true, color: c.warning, rtlMode: true });
-    const recText = aiData.recommendations.map(r => `• ${r}`).join('\n\n');
-    s2.addText(recText, { x: 6.7, y: 3.8, w: 5.9, h: 2.5, fontSize: 14, color: c.textLight, rtlMode: true, valign: 'top' });
+    s2.addShape(pptx.ShapeType.rect, { x: 0.5, y: 3.0, w: 6.5, h: 3.8, fill: { color: c.surface }, line: { color: c.border, pt: 1 } });
+    s2.addText('🎯 التوصيات الاستراتيجية الفورية:', { x: 0.7, y: 3.2, w: 6.1, h: 0.5, fontSize: 16, bold: true, color: c.darkRed, rtlMode: true, align: 'right' });
+    const recText = aiData.recommendations.map(r => `▪ ${r}`).join('\n\n');
+    s2.addText(recText, { x: 0.7, y: 3.8, w: 6.1, h: 2.5, fontSize: 16, color: c.textDark, rtlMode: true, align: 'right', valign: 'top' });
 
-    // ── الشريحة 3: إحصائيات الفروع (الجديدة كلياً) ──
+    // ── الشريحة 3: الجداول والإحصائيات ──
     const s3 = pptx.addSlide();
     s3.background = { color: c.bg };
     
     if (!isBranch) {
-      // حالة التقرير الشامل: مقارنة جميع الفروع
-      addHeader(s3, "مقارنة أداء جميع الفروع (إحصائيات شاملة)", "🏢");
+      addHeaderAndFooter(s3, "مقارنة أداء جميع الفروع (إحصائيات شاملة)", "🏢", 3);
       
-      // تجهيز بيانات الفروع
       const branchMap = {};
       dataSrc.forEach(r => {
         if (!r.branch) return;
@@ -1999,144 +2013,135 @@ async generate(isBranch, branchName = "") {
         const avgB = b.newRpts.length ? +(b.newRpts.reduce((s, r) => s + (r._pctBefore || 0), 0) / b.newRpts.length).toFixed(1) : 0;
         const avgA = b.newRpts.length ? +(b.newRpts.reduce((s, r) => s + (r._pctAfter || 0), 0) / b.newRpts.length).toFixed(1) : 0;
         return { ...b, pct, avgB, avgA, diff: +(avgA - avgB).toFixed(1) };
-      }).sort((a, b) => b.pct - a.pct); // ترتيب من الأفضل للأسوأ
+      }).sort((a, b) => b.pct - a.pct);
 
-      // رسم بياني مصغر لأفضل الفروع
       const topBranches = branchStats.slice(0, 8);
-      s3.addChart(pptx.charts.BAR,[
-        { name: 'نسبة العرض', labels: topBranches.map(b => b.branch), values: topBranches.map(b => b.pct) }
+      // رسم بياني مرتبط بالإكسيل
+      s3.addChart(pptx.charts.BAR, [
+        { name: 'نسبة العرض النهائية', labels: topBranches.map(b => b.branch), values: topBranches.map(b => b.pct) }
       ], {
         x: 0.5, y: 1.2, w: 12.3, h: 2.2, chartColors: [c.primary],
-        showLegend: false, dataLabelColor: c.textLight,
-        catAxisLabelColor: c.textLight, valAxisLabelColor: c.textLight, valAxisMaxVal: 100,
-        title: 'أفضل الفروع أداءً (النسبة النهائية)', showTitle: true, titleColor: c.accent, titleFontSize: 12
+        showLegend: false, dataLabelColor: c.textDark,
+        catAxisLabelColor: c.textDark, valAxisLabelColor: c.textDark, valAxisMaxVal: 100,
+        title: 'أفضل الفروع أداءً (مربوط بملف الإكسيل المدمج)', showTitle: true, titleColor: c.textMuted, titleFontSize: 10
       });
 
-      // جدول الفروع
-      const thB = t => ({ text: t, options: { bold: true, color: c.textLight, fill: { color: c.surface }, fontSize: 11, align: 'center' } });
-      const bRows = [[thB('الفرع'), thB('عدد التقارير'), thB('نسبة قبل'), thB('نسبة بعد'), thB('النسبة النهائية'), thB('التطور')]];
+      const thB = t => ({ text: t, options: { bold: true, color: 'FFFFFF', fill: { color: c.primary }, fontSize: 12, align: 'center' } });
+      const bRows = [[thB('التطور'), thB('النسبة النهائية'), thB('نسبة بعد'), thB('نسبة قبل'), thB('التقارير'), thB('الفرع')]];
       
-      branchStats.slice(0, 7).forEach((b, i) => {
-        const rowBg = i % 2 === 0 ? '0B1120' : '111827';
-        const tOpt = { color: c.textLight, fill: { color: rowBg }, fontSize: 10, align: 'center' };
+      branchStats.slice(0, 6).forEach((b, i) => {
+        const rowBg = i % 2 === 0 ? 'FFFFFF' : 'F3F4F6';
+        const tOpt = { color: c.textDark, fill: { color: rowBg }, fontSize: 11, align: 'center' };
         const dc = b.diff > 0 ? c.success : b.diff < 0 ? c.danger : c.textMuted;
         bRows.push([
-          { text: b.branch, options: { ...tOpt, rtlMode: true, bold: true, color: c.accent } },
-          { text: String(b.count), options: tOpt },
-          { text: b.avgB ? b.avgB + '%' : '—', options: { ...tOpt, color: c.danger } },
+          { text: b.newRpts.length ? (b.diff > 0 ? '+' : b.diff === 0 ? '⚖️ ' : '') + b.diff + '%' : '—', options: { ...tOpt, bold: true, color: dc } },
+          { text: b.pct + '%', options: { ...tOpt, bold: true, color: c.textDark } },
           { text: b.avgA ? b.avgA + '%' : '—', options: { ...tOpt, color: c.success } },
-          { text: b.pct + '%', options: { ...tOpt, bold: true, color: b.pct >= 50 ? c.success : c.danger } },
-          { text: b.newRpts.length ? (b.diff > 0 ? '+' : '') + b.diff + '%' : '—', options: { ...tOpt, bold: true, color: dc } }
+          { text: b.avgB ? b.avgB + '%' : '—', options: { ...tOpt, color: c.danger } },
+          { text: String(b.count), options: tOpt },
+          { text: b.branch, options: { ...tOpt, rtlMode: true, bold: true, align: 'right' } }
         ]);
       });
-      s3.addTable(bRows, { x: 0.5, y: 3.6, w: 12.3, rowH: 0.4, border: { type: 'solid', color: c.surface, pt: 1 } });
+      s3.addTable(bRows, { x: 0.5, y: 3.6, w: 12.3, rowH: 0.45, border: { type: 'solid', color: c.border, pt: 1 } });
 
     } else {
-      // حالة تقرير الفرع الواحد: أداء المندوبين وسجل التقارير
-      addHeader(s3, `سجل التقارير وأداء المندوبين - فرع ${branchName}`, "👤");
+      addHeaderAndFooter(s3, `سجل التقارير وأداء المندوبين - فرع ${branchName}`, "👤", 3);
       
       const sortedRpts = [...dataSrc].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 10);
       
-      const thA = t => ({ text: t, options: { bold: true, color: c.textLight, fill: { color: c.surface }, fontSize: 12, align: 'center' } });
-      const aRows = [[thA('المندوب'), thA('التاريخ'), thA('النوع'), thA('نسبة قبل'), thA('نسبة بعد'), thA('الفرق')]];
+      const thA = t => ({ text: t, options: { bold: true, color: 'FFFFFF', fill: { color: c.primary }, fontSize: 12, align: 'center' } });
+      const aRows = [[thA('الفرق'), thA('نسبة بعد'), thA('نسبة قبل'), thA('النوع'), thA('التاريخ'), thA('المندوب')]];
 
       sortedRpts.forEach((r, i) => {
-        const rowBg = i % 2 === 0 ? '0B1120' : '111827';
-        const tOpt = { color: c.textLight, fill: { color: rowBg }, fontSize: 11, align: 'center' };
+        const rowBg = i % 2 === 0 ? 'FFFFFF' : 'F3F4F6';
+        const tOpt = { color: c.textDark, fill: { color: rowBg }, fontSize: 11, align: 'center' };
         const diff = r._isNew ? +(r._pctAfter - r._pctBefore).toFixed(1) : null;
         const dc = diff > 0 ? c.success : diff < 0 ? c.danger : c.textMuted;
         
         aRows.push([
-          { text: r.agent || 'غير محدد', options: { ...tOpt, rtlMode: true, bold: true, color: c.accent } },
+          { text: diff !== null ? (diff > 0 ? '+' : diff === 0 ? '⚖️ ' : '') + diff + '%' : '—', options: { ...tOpt, bold: true, color: dc } },
+          { text: r._pct + '%', options: { ...tOpt, color: c.textDark, bold: true } },
+          { text: r._isNew ? r._pctBefore + '%' : '—', options: { ...tOpt, color: c.textMuted } },
+          { text: r._isNew ? 'قبل وبعد' : 'عادي', options: tOpt },
           { text: r.timestamp ? r.timestamp.slice(0,10) : '—', options: tOpt },
-          { text: r._isNew ? 'قبل وبعد' : 'عادي', options: { ...tOpt, color: r._isNew ? c.primary : c.textMuted } },
-          { text: r._isNew ? r._pctBefore + '%' : '—', options: { ...tOpt, color: c.danger } },
-          { text: r._pct + '%', options: { ...tOpt, color: c.success, bold: true } },
-          { text: diff !== null ? (diff > 0 ? '+' : '') + diff + '%' : '—', options: { ...tOpt, bold: true, color: dc } }
+          { text: r.agent || 'غير محدد', options: { ...tOpt, rtlMode: true, bold: true, align: 'right' } }
         ]);
       });
       
-      s3.addShape(pptx.ShapeType.rect, { x: 0.5, y: 1.2, w: 12.3, h: 0.6, fill: { color: c.surface } });
-      s3.addText(`يعرض هذا الجدول أحدث ${sortedRpts.length} تقارير تم رفعها للفرع لمتابعة نشاط المندوبين.`, { x: 0.7, y: 1.25, w: 11.9, h: 0.5, fontSize: 12, color: c.textMuted, rtlMode: true });
-      s3.addTable(aRows, { x: 0.5, y: 2.0, w: 12.3, rowH: 0.5, border: { type: 'solid', color: c.surface, pt: 1 } });
+      s3.addTable(aRows, { x: 0.5, y: 1.5, w: 12.3, rowH: 0.5, border: { type: 'solid', color: c.border, pt: 1 } });
     }
 
-// ── الشريحة 4: التحليل المقارن للأقسام (Data Visualization) ──
-      if (secs.length > 0) {
-        const s4 = pptx.addSlide(); 
-        s4.background = { color: c.bg };
-        addHeader(s4, "مقارنة الأداء حسب القسم (قبل / بعد)", "📈");
-
-        s4.addChart(pptx.charts.BAR, [
-          { name: 'قبل التحسين', labels: secs.map(s => s.label), values: secs.map(s => s.pctBefore) },
-          { name: 'بعد التحسين', labels: secs.map(s => s.label), values: secs.map(s => s.pctAfter) }
-        ], { 
-          x: 0.5, y: 1.2, w: 12.3, h: 3.5, chartColors: [c.danger, c.success], 
-          showLegend: true, legendPos: 'b', legendColor: c.textLight,
-          valAxisMaxVal: 100, valGridLine: { color: c.surface }, dataLabelColor: c.textLight,
-          catAxisLabelColor: c.textLight, valAxisLabelColor: c.textLight
-        });
-
-        // التعديل الجذري: فصل الأقسام التي تحسنت فعلياً عن التي تراجعت، واستبعاد الثابتة من الترشيح كـ "تطور"
-        const improvedSecs = secs.filter(s => (s.pctAfter - s.pctBefore) > 0).sort((a,b) => (b.pctAfter-b.pctBefore) - (a.pctAfter-a.pctBefore));
-        const declinedSecs = secs.filter(s => (s.pctAfter - s.pctBefore) < 0).sort((a,b) => (a.pctAfter-a.pctBefore) - (b.pctAfter-b.pctBefore));
-
-        const best = improvedSecs.length > 0 ? improvedSecs[0] : null;
-        const worst = declinedSecs.length > 0 ? declinedSecs[0] : null;
-
-        if (best || worst) {
-          if (best) {
-            s4.addShape(pptx.ShapeType.rect, { x: 0.5, y: 5.0, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.success, pt: 2 } });
-            s4.addText(`🏆 أفضل قسم تطوراً: ${best.label} (+${+(best.pctAfter-best.pctBefore).toFixed(1)}%)`, { x: 0.6, y: 5.3, w: 5.8, h: 0.6, fontSize: 14, bold: true, color: c.success, rtlMode: true, align: 'center' });
-          } else {
-            s4.addShape(pptx.ShapeType.rect, { x: 0.5, y: 5.0, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.textMuted, pt: 2 } });
-            s4.addText(`⚖️ ثبات: لا يوجد أي تطور ملحوظ في الأقسام (0%)`, { x: 0.6, y: 5.3, w: 5.8, h: 0.6, fontSize: 14, bold: true, color: c.textMuted, rtlMode: true, align: 'center' });
-          }
-
-          if (worst) {
-            s4.addShape(pptx.ShapeType.rect, { x: 6.8, y: 5.0, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.danger, pt: 2 } });
-            s4.addText(`⚠️ قسم تراجع ويحتاج متابعة: ${worst.label} (${+(worst.pctAfter-worst.pctBefore).toFixed(1)}%)`, { x: 6.9, y: 5.3, w: 5.8, h: 0.6, fontSize: 14, bold: true, color: c.danger, rtlMode: true, align: 'center' });
-          } else {
-            s4.addShape(pptx.ShapeType.rect, { x: 6.8, y: 5.0, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.success, pt: 2 } });
-            s4.addText(`✅ استقرار آمن: لا توجد أي تراجعات سلبية في الأقسام`, { x: 6.9, y: 5.3, w: 5.8, h: 0.6, fontSize: 14, bold: true, color: c.success, rtlMode: true, align: 'center' });
-          }
-        } else {
-          // في حال كانت كل الأقسام الفارق فيها صفر تماماً
-          s4.addShape(pptx.ShapeType.rect, { x: 0.5, y: 5.0, w: 12.3, h: 1.2, fill: { color: c.surface }, line: { color: c.warning, pt: 2 } });
-          s4.addText(`⚖️ استقرار تام: جميع الأقسام سجلت ثباتاً دون أي تغيير أو تطور (الفارق 0%)`, { x: 0.6, y: 5.3, w: 12.1, h: 0.6, fontSize: 16, bold: true, color: c.warning, rtlMode: true, align: 'center' });
-        }
-      }
-    // ── الشريحة 5: جدول البيانات التفصيلي ──
+    // ── الشريحة 4: التحليل المقارن للأقسام (Data Visualization) ──
     if (secs.length > 0) {
-      const s5 = pptx.addSlide(); 
-      s5.background = { color: c.bg };
-      addHeader(s5, "جدول بيانات الأقسام التفصيلي", "📋");
+      const s4 = pptx.addSlide(); 
+      s4.background = { color: c.bg };
+      addHeaderAndFooter(s4, "مقارنة الأداء حسب القسم (مربوط بالإكسيل)", "📈", 4);
 
-      const th = t => ({ text: t, options: { bold: true, color: c.textLight, fill: { color: c.surface }, fontSize: 12, align: 'center' } });
-      const rows = [[th('القسم'), th('إجمالي المنتجات'), th('منتجات العربي'), th('النسبة قبل'), th('النسبة بعد'), th('التطور')]];
-      
-      secs.forEach((s, i) => {
-        const d = +(s.pctAfter - s.pctBefore).toFixed(1);
-        const dc = d > 0 ? c.success : d < 0 ? c.danger : c.textMuted;
-        const rowBg = i % 2 === 0 ? '0B1120' : '111827';
-        const tOpt = { color: c.textLight, fill: { color: rowBg }, fontSize: 11, align: 'center' };
-        
-        rows.push([
-          { text: s.label, options: { ...tOpt, rtlMode: true, bold: true } },
-          { text: String(s.totalA), options: tOpt },
-          { text: String(s.arabiA), options: tOpt },
-          { text: s.pctBefore + '%', options: { ...tOpt, color: c.danger } },
-          { text: s.pctAfter + '%', options: { ...tOpt, color: c.success, bold: true } },
-          { text: (d > 0 ? '+' : '') + d + '%', options: { ...tOpt, color: dc, bold: true } }
-        ]);
+      // رسم بياني مرتبط بالإكسيل، بألوان العربي (الرمادي للقديم، والأحمر للجديد)
+      s4.addChart(pptx.charts.BAR, [
+        { name: 'قبل التحسين', labels: secs.map(s => s.label), values: secs.map(s => s.pctBefore) },
+        { name: 'بعد التحسين', labels: secs.map(s => s.label), values: secs.map(s => s.pctAfter) }
+      ], { 
+        x: 0.5, y: 1.2, w: 12.3, h: 3.5, chartColors: [c.textMuted, c.primary], 
+        showLegend: true, legendPos: 'b', legendColor: c.textDark,
+        valAxisMaxVal: 100, valGridLine: { color: c.border }, dataLabelColor: c.textDark,
+        catAxisLabelColor: c.textDark, valAxisLabelColor: c.textDark
       });
-      s5.addTable(rows, { x: 0.5, y: 1.2, w: 12.3, rowH: 0.5, border: { type: 'solid', color: c.surface, pt: 1 } });
+
+      const improvedSecs = secs.filter(s => (s.pctAfter - s.pctBefore) > 0).sort((a,b) => (b.pctAfter-b.pctBefore) - (a.pctAfter-a.pctBefore));
+      const declinedSecs = secs.filter(s => (s.pctAfter - s.pctBefore) < 0).sort((a,b) => (a.pctAfter-a.pctBefore) - (b.pctAfter-b.pctBefore));
+
+      const best = improvedSecs[0];
+      const worst = declinedSecs[0];
+
+      if (best || worst) {
+        if (best) {
+          s4.addShape(pptx.ShapeType.rect, { x: 6.8, y: 5.2, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.success, pt: 2 } });
+          s4.addText(`🏆 أفضل قسم تطوراً: ${best.label} (+${+(best.pctAfter-best.pctBefore).toFixed(1)}%)`, { x: 6.9, y: 5.5, w: 5.8, h: 0.6, fontSize: 16, bold: true, color: c.success, rtlMode: true, align: 'center' });
+        } else {
+          s4.addShape(pptx.ShapeType.rect, { x: 6.8, y: 5.2, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.textMuted, pt: 2 } });
+          s4.addText(`⚖️ ثبات: لا يوجد أي تطور ملحوظ في الأقسام (0%)`, { x: 6.9, y: 5.5, w: 5.8, h: 0.6, fontSize: 16, bold: true, color: c.textMuted, rtlMode: true, align: 'center' });
+        }
+
+        if (worst) {
+          s4.addShape(pptx.ShapeType.rect, { x: 0.5, y: 5.2, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.danger, pt: 2 } });
+          s4.addText(`⚠️ قسم تراجع ويحتاج متابعة: ${worst.label} (${+(worst.pctAfter-worst.pctBefore).toFixed(1)}%)`, { x: 0.6, y: 5.5, w: 5.8, h: 0.6, fontSize: 16, bold: true, color: c.danger, rtlMode: true, align: 'center' });
+        } else {
+          s4.addShape(pptx.ShapeType.rect, { x: 0.5, y: 5.2, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.success, pt: 2 } });
+          s4.addText(`✅ استقرار آمن: لا توجد أي تراجعات سلبية في الأقسام`, { x: 0.6, y: 5.5, w: 5.8, h: 0.6, fontSize: 16, bold: true, color: c.success, rtlMode: true, align: 'center' });
+        }
+      } else {
+        s4.addShape(pptx.ShapeType.rect, { x: 0.5, y: 5.2, w: 12.3, h: 1.2, fill: { color: c.surface }, line: { color: c.warning, pt: 2 } });
+        s4.addText(`⚖️ استقرار تام: جميع الأقسام سجلت ثباتاً دون أي تغيير أو تطور (الفارق 0%)`, { x: 0.6, y: 5.5, w: 12.1, h: 0.6, fontSize: 18, bold: true, color: c.warning, rtlMode: true, align: 'center' });
+      }
     }
 
-    // تصدير الملف النهائي
+    // ── الشريحة 5: خطة العمل والقرارات ──
+    const s5 = pptx.addSlide();
+    s5.background = { color: c.bg };
+    addHeaderAndFooter(s5, "خطة العمل والقرارات التنفيذية الموصى بها", "📋", secs.length > 0 ? 5 : 4);
+
+    s5.addShape(pptx.ShapeType.rect, { x: 0.5, y: 1.2, w: 12.3, h: 0.8, fill: { color: c.primary } });
+    s5.addText("الخطوات التالية المقترحة بناءً على تحليل البيانات:", { x: 1, y: 1.35, w: 11.3, h: 0.5, fontSize: 20, bold: true, color: 'FFFFFF', rtlMode: true, align: 'right' });
+
+    const actions = [
+      { t: "مراجعة سياسة تخصيص المساحات", d: "إعادة التفاوض مع الفروع التي أظهرت تراجعاً أو ثباتاً لزيادة حصة العرض لمنتجات العربي.", icon: "🏢" },
+      { t: "تكثيف المتابعة الميدانية", d: "توجيه فريق المندوبين للتركيز على الأقسام ذات الأداء المنخفض (أقل من 50%).", icon: "👥" },
+      { t: "دعم نقاط البيع (POSM)", d: "توفير مواد إعلانية ومطبوعات داعمة للأقسام التي تعاني من بطء في معدلات التطور.", icon: "📢" },
+      { t: "التقييم المستمر للبيانات", d: "إلزام جميع المندوبين برفع تقارير (قبل وبعد) لضمان دقة خوارزميات قياس الأداء.", icon: "📊" }
+    ];
+
+    actions.forEach((act, i) => {
+      const yPos = 2.5 + (i * 1.1);
+      s5.addShape(pptx.ShapeType.rect, { x: 0.5, y: yPos, w: 12.3, h: 0.9, fill: { color: c.surface }, line: { color: c.border, pt: 1 } });
+      s5.addText(act.icon, { x: 11.8, y: yPos + 0.15, w: 0.8, h: 0.6, fontSize: 24, align: 'center' });
+      s5.addText(act.t, { x: 8.5, y: yPos + 0.15, w: 3.2, h: 0.6, fontSize: 18, bold: true, color: c.darkRed, rtlMode: true, align: 'right' });
+      s5.addText(act.d, { x: 1, y: yPos + 0.15, w: 7.3, h: 0.6, fontSize: 16, color: c.textDark, rtlMode: true, align: 'right' });
+    });
+
     const fname = isBranch 
-      ? `تقرير_ذكي_فرع_${branchName}_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.pptx` 
-      : `تقرير_ذكي_شامل_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.pptx`;
+      ? `تقرير_العربي_الميداني_فرع_${branchName}_${currentDate.replace(/\//g,'-')}.pptx` 
+      : `تقرير_العربي_الميداني_الشامل_${currentDate.replace(/\//g,'-')}.pptx`;
     
     await pptx.writeFile({ fileName: fname });
   }
