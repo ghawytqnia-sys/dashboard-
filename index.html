@@ -1790,33 +1790,47 @@ async function exportBranchPPTDirect(branch) {
    EXCEL EXPORT
 ══════════════════════════════════════════ */
 function exportExcel() {
-  const btn=document.getElementById('xlsBtn');
+  const btn = document.getElementById('xlsBtn');
   btn.classList.add('loading');
   try {
-    const wb=XLSX.utils.book_new();
-    const rptData=[['الفرع','المندوب','نوع التقرير','نسبة قبل %','نسبة بعد %','الفرق %','إجمالي','عربي','التاريخ']];
-    reports.forEach(r=>{
-      const dv=r._isNew?+(r._pctAfter-r._pctBefore).toFixed(1):'';
-      rptData.push([r.branch||'',r.agent||'',r._isNew?'قبل/بعد':'قديم',r._pctBefore||'',r._pct||'',dv,r._totalAll||0,r._totalArabi||0,r.timestamp||'']);
+    const wb = XLSX.utils.book_new();
+    
+    // شيت التقارير
+    const rptData = [['الفرع','المندوب','نوع التقرير','نسبة قبل %','نسبة بعد %','الفرق %','حالة التغير','إجمالي المنتجات','منتجات العربي','التاريخ']];
+    reports.forEach(r => {
+      const dv = r._isNew ? +(r._pctAfter - r._pctBefore).toFixed(1) : '';
+      const status = r._isNew ? (dv > 0 ? '📈 تحسن' : dv < 0 ? '📉 تراجع' : '⚖️ ثبات (بدون تغيير)') : '—';
+      rptData.push([r.branch || '', r.agent || '', r._isNew ? 'قبل/بعد' : 'قديم', r._pctBefore || '', r._pct || '', dv, status, r._totalAll || 0, r._totalArabi || 0, r.timestamp || '']);
     });
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rptData),'كل التقارير');
-    const brStats=calcBranchStats();
-    const brData=[['الفرع','نسبة العرض %','عدد التقارير','إجمالي','العربي','التقييم']];
-    brStats.sort((a,b)=>b.pct-a.pct).forEach(b=>{
-      const {label}=ratingInfo(b.pct);
-      brData.push([b.branch,b.pct,b.count,b.totalAll,b.totalArabi,label.replace(/[⭐🌟✅📈]/g,'').trim()]);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rptData), 'كل التقارير');
+    
+    // شيت الفروع
+    const brStats = calcBranchStats();
+    const brData = [['الفرع','نسبة العرض النهائية %','عدد التقارير','إجمالي المنتجات','منتجات العربي','التقييم']];
+    brStats.sort((a,b) => b.pct - a.pct).forEach(b => {
+      const { label } = ratingInfo(b.pct);
+      brData.push([b.branch, b.pct, b.count, b.totalAll, b.totalArabi, label.replace(/[⭐🌟✅📈]/g,'').trim()]);
     });
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(brData),'إحصاءات الفروع');
-    const secData=calcSectionsData();
-    const secSheet=[['القسم','عربي قبل','إجمالي قبل','نسبة قبل %','عربي بعد','إجمالي بعد','نسبة بعد %','الفرق %']];
-    secData.forEach(s=>secSheet.push([s.label,s.arabiB,s.totalB,s.pctBefore,s.arabiA,s.totalA,s.pctAfter,s.diff]));
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(secSheet),'تحليل الأقسام');
-    XLSX.writeFile(wb,`تقرير_نسب_العرض_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(brData), 'إحصاءات الفروع');
+    
+    // شيت الأقسام
+    const secData = calcSectionsData();
+    const secSheet = [['القسم','عربي قبل','إجمالي قبل','نسبة قبل %','عربي بعد','إجمالي بعد','نسبة بعد %','الفرق %','حالة التغير']];
+    secData.forEach(s => {
+      const d = s.diff;
+      const status = d > 0 ? '📈 تحسن' : d < 0 ? '📉 تراجع' : '⚖️ ثبات (0%)';
+      secSheet.push([s.label, s.arabiB, s.totalB, s.pctBefore, s.arabiA, s.totalA, s.pctAfter, d, status]);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(secSheet), 'تحليل الأقسام');
+    
+    XLSX.writeFile(wb, `تقرير_نسب_العرض_التحليلي_${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.xlsx`);
     showToast('تم تحميل ملف Excel (3 أوراق)');
-  } catch(e) { showToast('خطأ Excel: '+e.message,'err'); }
-  finally { btn.classList.remove('loading'); }
+  } catch(e) { 
+    showToast('خطأ Excel: ' + e.message, 'err'); 
+  } finally { 
+    btn.classList.remove('loading'); 
+  }
 }
-
 
 /* ══════════════════════════════════════════
    منطق تشغيل القائمة المنسدلة
@@ -1852,7 +1866,7 @@ const SmartPPTEngine = {
   },
 
   // خوارزمية الذكاء الاصطناعي لتوليد نصوص التحليل
-  generateAIInsights(dataSrc, isBranch, branchName) {
+generateAIInsights(dataSrc, isBranch, branchName) {
     const totalA = dataSrc.reduce((s, r) => s + (r._totalArabi || 0), 0);
     const totalAll = dataSrc.reduce((s, r) => s + (r._totalAll || 0), 0);
     const newRpts = dataSrc.filter(r => r._isNew);
@@ -1861,50 +1875,34 @@ const SmartPPTEngine = {
     const avgAft = newRpts.length ? +(newRpts.reduce((s, r) => s + (r._pctAfter || 0), 0) / newRpts.length).toFixed(1) : 0;
     const diff = +(avgAft - avgBef).toFixed(1);
 
-    // نموذج رياضي لتقدير زيادة المبيعات (كل 1% زيادة في العرض = 0.8% زيادة متوقعة في التحويل)
     const salesImpact = +(diff * 0.8).toFixed(1); 
 
     let execSummary = "";
-    let recommendations =[];
-
+    let recommendations = [];
     const target = isBranch ? `فرع ${branchName}` : "الفروع الإجمالية";
 
     if (newRpts.length === 0) {
       return {
         execSummary: `📌 البيانات الحالية لـ ${target} تعتمد على التقييم المباشر دون وجود بيانات تاريخية للمقارنة (قبل/بعد). متوسط العرض الحالي هو ${avgAft}%.`,
         salesImpact: 0,
-        recommendations:["إلزام المندوبين برفع تقارير (قبل وبعد) لتفعيل خوارزميات قياس الأداء.", "مراجعة الأقسام ذات النسبة الأقل من 50%."],
-        diff: 0, avgBef, avgAft
+        recommendations: ["إلزام المندوبين برفع تقارير (قبل وبعد) لتفعيل خوارزميات قياس الأداء.", "مراجعة الأقسام ذات النسبة الأقل من 50%."],
+        diff: 0, avgBef, avgAft, totalA, totalAll
       };
     }
 
     if (diff > 5) {
-      execSummary = `📈 أداء استثنائي: أظهر ${target} نمواً ملحوظاً في حصة العرض من ${avgBef}% إلى ${avgAft}%. هذا التحسن القوي بنسبة ${diff}% يعكس تطبيقاً ممتازاً لمعايير الترويج المعتمدة.`;
-      recommendations =[
-        "تعميم قصة نجاح الأقسام المتطورة على باقي الأقسام.",
-        `استغلال الزيادة المتوقعة في فرص البيع (+${salesImpact}%) بتوفير مخزون كافٍ.`,
-        "تكريم المندوبين المسؤولين عن هذا التحسن الملحوظ."
-      ];
+      execSummary = `📈 أداء استثنائي: أظهر ${target} نمواً ملحوظاً في حصة العرض من ${avgBef}% إلى ${avgAft}%. هذا التحسن القوي يعكس تطبيقاً ممتازاً لمعايير الترويج المعتمدة.`;
+      recommendations = ["تعميم قصة نجاح الأقسام المتطورة على باقي الأقسام.", `استغلال الزيادة المتوقعة في فرص البيع (+${salesImpact}%) بتوفير مخزون كافٍ.`];
     } else if (diff > 0) {
-      execSummary = `📊 تحسن طفيف: سجل ${target} تحسناً تدريجياً في حصة العرض بزيادة قدرها ${diff}%. الأداء يسير في الاتجاه الصحيح ولكنه يحتاج للمزيد من الجهد للوصول للحصة المستهدفة.`;
-      recommendations =[
-        "تكثيف الزيارات الميدانية للأقسام التي لم تشهد تغييراً.",
-        "الاستفادة من نقاط البيع البصرية (POSM) لدعم المنتجات الضعيفة.",
-        `التأثير على المبيعات يقدر بـ +${salesImpact}%، ويجب مضاعفته.`
-      ];
+      execSummary = `📊 تحسن طفيف: سجل ${target} تحسناً تدريجياً في حصة العرض بزيادة قدرها ${diff}%. الأداء يسير في الاتجاه الصحيح ولكنه يحتاج للمزيد من الجهد.`;
+      recommendations = ["تكثيف الزيارات الميدانية للأقسام التي لم تشهد تغييراً.", "الاستفادة من نقاط البيع البصرية (POSM) لدعم المنتجات."];
+    // التعديل الرئيسي هنا لمعالجة الثبات وعدم التغير
     } else if (diff === 0) {
-      execSummary = `⚖️ ركود في الأداء: استقرت حصة العرض لـ ${target} عند ${avgAft}% دون أي تغيير إيجابي أو سلبي. هذا الركود قد يؤدي إلى فقدان الحصة السوقية لصالح المنافسين.`;
-      recommendations =[
-        "عقد اجتماع عاجل مع مسؤولي العرض لمعرفة معوقات التحسين.",
-        "إعادة هيكلة خطة توزيع المنتجات داخل المعرض."
-      ];
+      execSummary = `⚖️ ثبات واستقرار تام: استقرت حصة العرض لـ ${target} عند ${avgAft}% دون حدوث أي تغيير إيجابي أو سلبي (الفارق 0%). يتطلب ذلك تغيير تكتيكات العرض.`;
+      recommendations = ["مراجعة أسباب عدم تحقيق أي تقدم رغم الزيارات الميدانية.", "إعادة التفاوض على المساحات مع إدارة المعرض لكسر حالة الثبات."];
     } else {
       execSummary = `📉 تراجع مقلق: هناك انخفاض في حصة منتجات العربي من ${avgBef}% إلى ${avgAft}% (تراجع ${Math.abs(diff)}%). هذا الانكماش يمثل خطراً مباشراً على حجم المبيعات.`;
-      recommendations =[
-        "تدخل إداري فوري لمعالجة التمدد للمنافسين على حساب العربي.",
-        `خسارة متوقعة في فرص إتمام البيع تقدر بـ ${Math.abs(salesImpact)}% يجب تداركها.`,
-        "إعادة ترتيب الرفوف وتطبيق سياسة المساحة العادلة."
-      ];
+      recommendations = ["تدخل إداري فوري لمعالجة التمدد للمنافسين على حساب العربي.", "إعادة ترتيب الرفوف وتطبيق سياسة المساحة العادلة فوراً."];
     }
 
     return { execSummary, recommendations, salesImpact, diff, avgBef, avgAft, totalA, totalAll };
@@ -2063,37 +2061,51 @@ async generate(isBranch, branchName = "") {
       s3.addTable(aRows, { x: 0.5, y: 2.0, w: 12.3, rowH: 0.5, border: { type: 'solid', color: c.surface, pt: 1 } });
     }
 
-    // ── الشريحة 4: التحليل المقارن للأقسام (Data Visualization) ──
-    if (secs.length > 0) {
-      const s4 = pptx.addSlide(); 
-      s4.background = { color: c.bg };
-      addHeader(s4, "مقارنة الأداء حسب القسم (قبل / بعد)", "📈");
+// ── الشريحة 4: التحليل المقارن للأقسام (Data Visualization) ──
+      if (secs.length > 0) {
+        const s4 = pptx.addSlide(); 
+        s4.background = { color: c.bg };
+        addHeader(s4, "مقارنة الأداء حسب القسم (قبل / بعد)", "📈");
 
-      s4.addChart(pptx.charts.BAR,[
-        { name: 'قبل التحسين', labels: secs.map(s => s.label), values: secs.map(s => s.pctBefore) },
-        { name: 'بعد التحسين', labels: secs.map(s => s.label), values: secs.map(s => s.pctAfter) }
-      ], { 
-        x: 0.5, y: 1.2, w: 12.3, h: 3.5, 
-        chartColors: [c.danger, c.success], 
-        showLegend: true, legendPos: 'b', legendColor: c.textLight,
-        valAxisMaxVal: 100, valGridLine: { color: c.surface },
-        dataLabelColor: c.textLight, dataLabelFontSize: 10,
-        catAxisLabelColor: c.textLight, valAxisLabelColor: c.textLight
-      });
+        s4.addChart(pptx.charts.BAR, [
+          { name: 'قبل التحسين', labels: secs.map(s => s.label), values: secs.map(s => s.pctBefore) },
+          { name: 'بعد التحسين', labels: secs.map(s => s.label), values: secs.map(s => s.pctAfter) }
+        ], { 
+          x: 0.5, y: 1.2, w: 12.3, h: 3.5, chartColors: [c.danger, c.success], 
+          showLegend: true, legendPos: 'b', legendColor: c.textLight,
+          valAxisMaxVal: 100, valGridLine: { color: c.surface }, dataLabelColor: c.textLight,
+          catAxisLabelColor: c.textLight, valAxisLabelColor: c.textLight
+        });
 
-      const sortedSecs = [...secs].sort((a,b) => (b.pctAfter-b.pctBefore) - (a.pctAfter-a.pctBefore));
-      const best = sortedSecs[0];
-      const worst = sortedSecs[sortedSecs.length - 1];
-      
-      if(best && worst) {
-        s4.addShape(pptx.ShapeType.rect, { x: 0.5, y: 5.0, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.success, pt: 2 } });
-        s4.addText(`🏆 أفضل قسم تطوراً: ${best.label} (+${+(best.pctAfter-best.pctBefore).toFixed(1)}%)`, { x: 0.6, y: 5.3, w: 5.8, h: 0.6, fontSize: 14, bold: true, color: c.success, rtlMode: true, align: 'center' });
+        // التعديل الجذري: فصل الأقسام التي تحسنت فعلياً عن التي تراجعت، واستبعاد الثابتة من الترشيح كـ "تطور"
+        const improvedSecs = secs.filter(s => (s.pctAfter - s.pctBefore) > 0).sort((a,b) => (b.pctAfter-b.pctBefore) - (a.pctAfter-a.pctBefore));
+        const declinedSecs = secs.filter(s => (s.pctAfter - s.pctBefore) < 0).sort((a,b) => (a.pctAfter-a.pctBefore) - (b.pctAfter-b.pctBefore));
 
-        s4.addShape(pptx.ShapeType.rect, { x: 6.8, y: 5.0, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.danger, pt: 2 } });
-        s4.addText(`⚠️ قسم يحتاج متابعة: ${worst.label} (${+(worst.pctAfter-worst.pctBefore).toFixed(1)}%)`, { x: 6.9, y: 5.3, w: 5.8, h: 0.6, fontSize: 14, bold: true, color: c.danger, rtlMode: true, align: 'center' });
+        const best = improvedSecs.length > 0 ? improvedSecs[0] : null;
+        const worst = declinedSecs.length > 0 ? declinedSecs[0] : null;
+
+        if (best || worst) {
+          if (best) {
+            s4.addShape(pptx.ShapeType.rect, { x: 0.5, y: 5.0, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.success, pt: 2 } });
+            s4.addText(`🏆 أفضل قسم تطوراً: ${best.label} (+${+(best.pctAfter-best.pctBefore).toFixed(1)}%)`, { x: 0.6, y: 5.3, w: 5.8, h: 0.6, fontSize: 14, bold: true, color: c.success, rtlMode: true, align: 'center' });
+          } else {
+            s4.addShape(pptx.ShapeType.rect, { x: 0.5, y: 5.0, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.textMuted, pt: 2 } });
+            s4.addText(`⚖️ ثبات: لا يوجد أي تطور ملحوظ في الأقسام (0%)`, { x: 0.6, y: 5.3, w: 5.8, h: 0.6, fontSize: 14, bold: true, color: c.textMuted, rtlMode: true, align: 'center' });
+          }
+
+          if (worst) {
+            s4.addShape(pptx.ShapeType.rect, { x: 6.8, y: 5.0, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.danger, pt: 2 } });
+            s4.addText(`⚠️ قسم تراجع ويحتاج متابعة: ${worst.label} (${+(worst.pctAfter-worst.pctBefore).toFixed(1)}%)`, { x: 6.9, y: 5.3, w: 5.8, h: 0.6, fontSize: 14, bold: true, color: c.danger, rtlMode: true, align: 'center' });
+          } else {
+            s4.addShape(pptx.ShapeType.rect, { x: 6.8, y: 5.0, w: 6, h: 1.2, fill: { color: c.surface }, line: { color: c.success, pt: 2 } });
+            s4.addText(`✅ استقرار آمن: لا توجد أي تراجعات سلبية في الأقسام`, { x: 6.9, y: 5.3, w: 5.8, h: 0.6, fontSize: 14, bold: true, color: c.success, rtlMode: true, align: 'center' });
+          }
+        } else {
+          // في حال كانت كل الأقسام الفارق فيها صفر تماماً
+          s4.addShape(pptx.ShapeType.rect, { x: 0.5, y: 5.0, w: 12.3, h: 1.2, fill: { color: c.surface }, line: { color: c.warning, pt: 2 } });
+          s4.addText(`⚖️ استقرار تام: جميع الأقسام سجلت ثباتاً دون أي تغيير أو تطور (الفارق 0%)`, { x: 0.6, y: 5.3, w: 12.1, h: 0.6, fontSize: 16, bold: true, color: c.warning, rtlMode: true, align: 'center' });
+        }
       }
-    }
-
     // ── الشريحة 5: جدول البيانات التفصيلي ──
     if (secs.length > 0) {
       const s5 = pptx.addSlide(); 
