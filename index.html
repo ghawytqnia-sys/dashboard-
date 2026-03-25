@@ -2047,6 +2047,44 @@ const SmartPPTEngine = {
     
 
     let currentSlideNum = 3; 
+    // --- إضافة شريحة جدول الأقسام (خاصة بتقرير الفرع فقط) ---
+    if (isBranch && secs.length > 0) {
+      const rowsPerSlide = 7; // عدد الأقسام في الشريحة لضمان وضوح الجدول
+      for (let i = 0; i < secs.length; i += rowsPerSlide) {
+        const sSecTable = pptx.addSlide();
+        sSecTable.background = { color: c.bg };
+        addHeaderAndFooter(sSecTable, `تفاصيل تطور الأقسام بالفرع (${i + 1} - ${Math.min(i + rowsPerSlide, secs.length)})`, "📋", currentSlideNum++);
+
+        // ترويسة الجدول
+        const thB = t => ({ text: t, options: { bold: true, color: 'FFFFFF', fill: { color: c.primary }, fontSize: 13, align: 'center' } });
+        const tRows = [[thB('الحالة'), thB('مقدار التطور'), thB('نسبة بعد'), thB('نسبة قبل'), thB('القسم')]];
+
+        // تقطيع الأقسام لتناسب الشريحة
+        const chunk = secs.slice(i, i + rowsPerSlide);
+        chunk.forEach((s, idx) => {
+          const diff = +(s.pctAfter - s.pctBefore).toFixed(1);
+          const rowBg = idx % 2 === 0 ? 'FFFFFF' : 'F3F4F6'; // ألوان صفوف متبادلة
+          const tOpt = { color: c.textDark, fill: { color: rowBg }, fontSize: 12, align: 'center' };
+          
+          let statusIcon = "⚖️ ثبات";
+          let diffColor = c.textMuted;
+          if (diff > 0) { statusIcon = "📈 تحسن"; diffColor = c.success; }
+          else if (diff < 0) { statusIcon = "📉 تراجع"; diffColor = c.danger; }
+
+          tRows.push([
+            { text: statusIcon, options: { ...tOpt, bold: true, color: diffColor } },
+            { text: (diff > 0 ? '+' : '') + diff + '%', options: { ...tOpt, bold: true, color: diffColor } },
+            { text: s.pctAfter + '%', options: { ...tOpt, bold: true } },
+            { text: s.pctBefore + '%', options: tOpt },
+            { text: s.label, options: { ...tOpt, rtlMode: true, bold: true, align: 'right' } }
+          ]);
+        });
+
+        // رسم الجدول في الشريحة
+        sSecTable.addTable(tRows, { x: 0.5, y: 1.5, w: 12.3, rowH: 0.65, border: { type: 'solid', color: c.border, pt: 1 } });
+      }
+    }
+
     if (!isBranch) {
       // 1. تجميع بيانات جميع الفروع للحسابات العامة
       const branchMap = {};
@@ -2088,7 +2126,7 @@ const SmartPPTEngine = {
 
       // --- شرائح جداول الفروع المتطورة (توزيع تلقائي على الشرائح) ---
       if (developingBranches.length > 0) {
-        const rowsPerSlide = 7; // عدد الفروع في كل شريحة لضمان وضوح الخط
+        const rowsPerSlide = 8; // عدد الفروع في كل شريحة لضمان وضوح الخط
 
         for (let i = 0; i < developingBranches.length; i += rowsPerSlide) {
           const sTable = pptx.addSlide();
