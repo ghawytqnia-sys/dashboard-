@@ -489,6 +489,22 @@ table.dt tr:hover td{background:rgba(14,165,233,.04)}
 /* إخفاء النصوص في الناف بار على الموبايل لترك مساحة */
 @media(max-width:720px) { .hide-m { display: none !important; } }
 
+.edit-input {
+  width: 70px;
+  background: rgba(14,165,233,0.1);
+  border: 1px solid var(--gb);
+  color: var(--tx);
+  padding: 5px;
+  border-radius: 5px;
+  text-align: center;
+  font-family: 'Cairo', sans-serif;
+}
+.edit-input:focus {
+  border-color: var(--ac2);
+  outline: none;
+  background: rgba(14,165,233,0.2);
+}
+
 </style>
 </head>
 <body>
@@ -752,6 +768,38 @@ table.dt tr:hover td{background:rgba(14,165,233,.04)}
   </div>
 </div>
 
+<!-- ══════════════ EDIT REPORT MODAL ══════════════ -->
+<div class="modal-overlay hidden" id="editReportModal">
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <h3>📝 تعديل بيانات التقرير</h3>
+      <button class="modal-close" onclick="closeEditModal()">✕ إغلاق</button>
+    </div>
+    <div id="editReportInfo" style="margin-bottom: 15px; padding: 10px; background: rgba(14,165,233,0.05); border-radius: 8px; font-size: 13px;"></div>
+    
+    <div class="tbl-wrap" style="max-height: 400px; overflow-y: auto;">
+      <table class="dt">
+        <thead>
+          <tr>
+            <th>القسم</th>
+            <th>العربي (قبل)</th>
+            <th>الإجمالي (قبل)</th>
+            <th>العربي (بعد)</th>
+            <th>الإجمالي (بعد)</th>
+          </tr>
+        </thead>
+        <tbody id="editSectionsBody">
+          <!-- سيتم توليد الصفوف ديناميكياً -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeEditModal()">إلغاء</button>
+      <button class="modal-btn confirm" id="saveReportBtn" onclick="saveReportChanges()">💾 حفظ التعديلات</button>
+    </div>
+  </div>
+</div>
 <!-- ══════════════ DELETE CONFIRM MODAL ══════════════ -->
 <div class="modal-overlay hidden" id="deleteModal">
   <div class="modal-box">
@@ -1119,10 +1167,11 @@ function filterBranches() {
         <div class="branch-pct-bar"><div class="branch-pct-fill ${fillCls}" style="width:${Math.min(b.pct,100)}%"></div></div>
       </div>
       <div class="branch-reports">آخر تقرير: ${lastDate}</div>
-      <div class="branch-actions">
-        <button class="act-btn ppt" onclick="exportBranchPPTDirect('${b.branch.replace(/'/g,"\\'")}')">📊 تصدير PPT</button>
-      </div>
-    `;
+<div class="branch-actions">
+    <button class="act-btn view" onclick="showBranchReportsList('${b.branch.replace(/'/g,"\\")}')">📋 عرض التقارير</button>
+    <button class="act-btn ppt" onclick="exportBranchPPTDirect('${b.branch.replace(/'/g,"\\")}')">📊 تصدير PPT</button>
+  </div>
+`;
     grid.appendChild(div);
   });
 }
@@ -1465,6 +1514,7 @@ function renderReportsTable() {
   tbody.innerHTML='';
   if (!data.length) {
     tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--tm)">لا توجد تقارير مطابقة</td></tr>';
+    
     return;
   }
   data.forEach((r,i)=>{
@@ -1484,9 +1534,13 @@ function renderReportsTable() {
       <td>${(r._totalAll||0).toLocaleString()}</td>
       <td>${(r._totalArabi||0).toLocaleString()}</td>
       <td style="font-size:10px;color:var(--tm)">${r.timestamp||'—'}</td>
+
       <td>
-        <button class="act-btn del" onclick="openDeleteModal('${r._docId||''}','${r.branch||'—'} / ${r.agent||'—'}')">🗑️ حذف</button>
-      </td>
+    <button class="act-btn view" style="margin-left:5px" onclick="openEditReport('${r._docId}')">📝 تعديل</button>
+    <br></br>
+    <button class="act-btn del" style= "margin-left: 5px" onclick="openDeleteModal('${r._docId||''}','${r.branch||'—'} / ${r.agent||'—'}')">🗑️ حذف</button>
+  </td>
+
     `;
     tbody.appendChild(tr);
   });
@@ -1975,7 +2029,7 @@ const SmartPPTEngine = {
     s2.addText(aiData.execSummary, { x: 0.7, y: 1.3, w: 11.9, h: 1.3, fontSize: 18, color: c.textDark, rtlMode: true, align: 'right', lineSpacing: 28 });
 
     s2.addShape(pptx.ShapeType.rect, { x: 7.3, y: 3.0, w: 5.5, h: 3.8, fill: { color: c.surface }, line: { color: c.border, pt: 1 } });
-    s2.addText('💰 التأثير على المبيعات (قابل للتعديل عبر Excel)', { x: 7.5, y: 3.2, w: 5.1, h: 0.5, fontSize: 14, bold: true, color: c.primary, rtlMode: true, align: 'right' });
+    s2.addText('💰التأثير على المبيعات', { x: 7.5, y: 3.2, w: 5.1, h: 0.5, fontSize: 14, bold: true, color: c.primary, rtlMode: true, align: 'right' });
     
     // هذا الرسم البياني مرتبط بملف إكسيل داخلي بالباوربوينت
     s2.addChart(pptx.charts.DOUGHNUT, [
@@ -1990,14 +2044,11 @@ const SmartPPTEngine = {
     s2.addText('🎯 التوصيات الاستراتيجية الفورية:', { x: 0.7, y: 3.2, w: 6.1, h: 0.5, fontSize: 16, bold: true, color: c.darkRed, rtlMode: true, align: 'right' });
     const recText = aiData.recommendations.map(r => `▪ ${r}`).join('\n\n');
     s2.addText(recText, { x: 0.7, y: 3.8, w: 6.1, h: 2.5, fontSize: 16, color: c.textDark, rtlMode: true, align: 'right', valign: 'top' });
-
-    // ── الشريحة 3: الجداول والإحصائيات ──
-    const s3 = pptx.addSlide();
-    s3.background = { color: c.bg };
     
+
+    let currentSlideNum = 3; 
     if (!isBranch) {
-      addHeaderAndFooter(s3, "مقارنة أداء جميع الفروع (إحصائيات شاملة)", "🏢", 3);
-      
+      // 1. تجميع بيانات جميع الفروع للحسابات العامة
       const branchMap = {};
       dataSrc.forEach(r => {
         if (!r.branch) return;
@@ -2007,78 +2058,85 @@ const SmartPPTEngine = {
         branchMap[r.branch].totalAll += (r._totalAll || 0);
         if (r._isNew) branchMap[r.branch].newRpts.push(r);
       });
-      
-      const branchStats = Object.values(branchMap).map(b => {
+
+      // 2. حساب النتائج لكل فرع
+      const allBranchStats = Object.values(branchMap).map(b => {
         const pct = b.totalAll > 0 ? +((b.totalA / b.totalAll) * 100).toFixed(1) : 0;
         const avgB = b.newRpts.length ? +(b.newRpts.reduce((s, r) => s + (r._pctBefore || 0), 0) / b.newRpts.length).toFixed(1) : 0;
         const avgA = b.newRpts.length ? +(b.newRpts.reduce((s, r) => s + (r._pctAfter || 0), 0) / b.newRpts.length).toFixed(1) : 0;
         return { ...b, pct, avgB, avgA, diff: +(avgA - avgB).toFixed(1) };
-      }).sort((a, b) => b.pct - a.pct);
+      });
 
-      const topBranches = branchStats.slice(0, 8);
-      // رسم بياني مرتبط بالإكسيل
-      s3.addChart(pptx.charts.BAR, [
-        { name: 'نسبة العرض النهائية', labels: topBranches.map(b => b.branch), values: topBranches.map(b => b.pct) }
+      // 3. تصفية الفروع التي حققت تطوراً فقط (diff > 0) وترتيبها من الأكثر تطوراً
+      const developingBranches = allBranchStats
+        .filter(b => b.diff > 0)
+        .sort((a, b) => b.diff - a.diff);
+
+      // --- شريحة الرسم البياني (تظهر أفضل 8 فروع أداءً بشكل عام) ---
+      const sChart = pptx.addSlide();
+      sChart.background = { color: c.bg };
+      addHeaderAndFooter(sChart, "تحليل الأداء المقارن للفروع", "📊", currentSlideNum++);
+      
+      const topForChart = allBranchStats.sort((a,b) => b.pct - a.pct).slice(0, 8);
+      sChart.addChart(pptx.charts.BAR,[
+        { name: 'نسبة العرض النهائية', labels: topForChart.map(b => b.branch), values: topForChart.map(b => b.pct) }
       ], {
-        x: 0.5, y: 1.2, w: 12.3, h: 2.2, chartColors: [c.primary],
+        x: 0.5, y: 1.5, w: 12.3, h: 4.5, chartColors: [c.primary],
         showLegend: false, dataLabelColor: c.textDark,
-        catAxisLabelColor: c.textDark, valAxisLabelColor: c.textDark, valAxisMaxVal: 100,
-        title: 'أفضل الفروع أداءً (مربوط بملف الإكسيل المدمج)', showTitle: true, titleColor: c.textMuted, titleFontSize: 10
+        valAxisMaxVal: 100, title: 'أعلى الفروع من حيث نسبة العرض الكلية', showTitle: true
       });
 
-      const thB = t => ({ text: t, options: { bold: true, color: 'FFFFFF', fill: { color: c.primary }, fontSize: 12, align: 'center' } });
-      const bRows = [[thB('التطور'), thB('النسبة النهائية'), thB('نسبة بعد'), thB('نسبة قبل'), thB('التقارير'), thB('الفرع')]];
-      
-      branchStats.slice(0, 6).forEach((b, i) => {
-        const rowBg = i % 2 === 0 ? 'FFFFFF' : 'F3F4F6';
-        const tOpt = { color: c.textDark, fill: { color: rowBg }, fontSize: 11, align: 'center' };
-        const dc = b.diff > 0 ? c.success : b.diff < 0 ? c.danger : c.textMuted;
-        bRows.push([
-          { text: b.newRpts.length ? (b.diff > 0 ? '+' : b.diff === 0 ? '⚖️ ' : '') + b.diff + '%' : '—', options: { ...tOpt, bold: true, color: dc } },
-          { text: b.pct + '%', options: { ...tOpt, bold: true, color: c.textDark } },
-          { text: b.avgA ? b.avgA + '%' : '—', options: { ...tOpt, color: c.success } },
-          { text: b.avgB ? b.avgB + '%' : '—', options: { ...tOpt, color: c.danger } },
-          { text: String(b.count), options: tOpt },
-          { text: b.branch, options: { ...tOpt, rtlMode: true, bold: true, align: 'right' } }
-        ]);
-      });
-      s3.addTable(bRows, { x: 0.5, y: 3.6, w: 12.3, rowH: 0.45, border: { type: 'solid', color: c.border, pt: 1 } });
+      // --- شرائح جداول الفروع المتطورة (توزيع تلقائي على الشرائح) ---
+      if (developingBranches.length > 0) {
+        const rowsPerSlide = 7; // عدد الفروع في كل شريحة لضمان وضوح الخط
 
-    } else {
-      addHeaderAndFooter(s3, `سجل التقارير وأداء المندوبين - فرع ${branchName}`, "👤", 3);
-      
-      const sortedRpts = [...dataSrc].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 10);
-      
-      const thA = t => ({ text: t, options: { bold: true, color: 'FFFFFF', fill: { color: c.primary }, fontSize: 12, align: 'center' } });
-      const aRows = [[thA('الفرق'), thA('نسبة بعد'), thA('نسبة قبل'), thA('النوع'), thA('التاريخ'), thA('المندوب')]];
+        for (let i = 0; i < developingBranches.length; i += rowsPerSlide) {
+          const sTable = pptx.addSlide();
+          sTable.background = { color: c.bg };
+          addHeaderAndFooter(sTable, `الفروع المحققة لنسب تطور إيجابية (${i + 1} - ${Math.min(i + rowsPerSlide, developingBranches.length)})`, "📈", currentSlideNum++);
 
-      sortedRpts.forEach((r, i) => {
-        const rowBg = i % 2 === 0 ? 'FFFFFF' : 'F3F4F6';
-        const tOpt = { color: c.textDark, fill: { color: rowBg }, fontSize: 11, align: 'center' };
-        const diff = r._isNew ? +(r._pctAfter - r._pctBefore).toFixed(1) : null;
-        const dc = diff > 0 ? c.success : diff < 0 ? c.danger : c.textMuted;
-        
-        aRows.push([
-          { text: diff !== null ? (diff > 0 ? '+' : diff === 0 ? '⚖️ ' : '') + diff + '%' : '—', options: { ...tOpt, bold: true, color: dc } },
-          { text: r._pct + '%', options: { ...tOpt, color: c.textDark, bold: true } },
-          { text: r._isNew ? r._pctBefore + '%' : '—', options: { ...tOpt, color: c.textMuted } },
-          { text: r._isNew ? 'قبل وبعد' : 'عادي', options: tOpt },
-          { text: r.timestamp ? r.timestamp.slice(0,10) : '—', options: tOpt },
-          { text: r.agent || 'غير محدد', options: { ...tOpt, rtlMode: true, bold: true, align: 'right' } }
-        ]);
-      });
-      
-      s3.addTable(aRows, { x: 0.5, y: 1.5, w: 12.3, rowH: 0.5, border: { type: 'solid', color: c.border, pt: 1 } });
+          const thB = t => ({ text: t, options: { bold: true, color: 'FFFFFF', fill: { color: c.primary }, fontSize: 12, align: 'center' } });
+          const bRows = [[thB('مقدار التطور'), thB('النسبة النهائية'), thB('نسبة بعد'), thB('نسبة قبل'), thB('التقارير'), thB('اسم الفرع')]];
+
+          const chunk = developingBranches.slice(i, i + rowsPerSlide);
+          chunk.forEach((b, idx) => {
+            const rowBg = idx % 2 === 0 ? 'FFFFFF' : 'F3F4F6';
+            const tOpt = { color: c.textDark, fill: { color: rowBg }, fontSize: 11, align: 'center' };
+            
+            bRows.push([
+              { text: `+${b.diff}%`, options: { ...tOpt, bold: true, color: c.success } },
+              { text: b.pct + '%', options: { ...tOpt, bold: true } },
+              { text: b.avgA + '%', options: tOpt },
+              { text: b.avgB + '%', options: tOpt },
+              { text: String(b.count), options: tOpt },
+              { text: b.branch, options: { ...tOpt, rtlMode: true, bold: true, align: 'right' } }
+            ]);
+          });
+
+          sTable.addTable(bRows, { x: 0.5, y: 1.5, w: 12.3, rowH: 0.6, border: { type: 'solid', color: c.border, pt: 1 } });
+          
+          sTable.addText(`* تم استبعاد الفروع التي لم تحقق نمواً إيجابياً من هذا الجدول للتركيز على مناطق التطوير.`, 
+            { x: 0.5, y: 6.5, w: 12.3, fontSize: 10, color: c.textMuted, rtlMode: true, align: 'right' });
+        }
+      } else {
+        // حالة عدم وجود فروع متطورة
+        const sEmpty = pptx.addSlide();
+        sEmpty.background = { color: c.bg };
+        addHeaderAndFooter(sEmpty, "نتائج تحليل التطور", "ℹ️", currentSlideNum++);
+        sEmpty.addText("لم يتم تسجيل أي فروع محققة لنسب تطور إيجابية في هذه الفترة.", 
+          { x: 0.5, y: 3, w: 12.3, fontSize: 20, color: c.warning, align: 'center', rtlMode: true });
+      }
     }
+      
 
-    // ── الشريحة 4: التحليل المقارن للأقسام (Data Visualization) ──
+    // ── الشريحة: التحليل المقارن للأقسام (Data Visualization) ──
     if (secs.length > 0) {
       const s4 = pptx.addSlide(); 
       s4.background = { color: c.bg };
-      addHeaderAndFooter(s4, "مقارنة الأداء حسب القسم (مربوط بالإكسيل)", "📈", 4);
+      addHeaderAndFooter(s4, "مقارنة الأداء حسب القسم ", "📈", currentSlideNum++);
 
-      // رسم بياني مرتبط بالإكسيل، بألوان العربي (الرمادي للقديم، والأحمر للجديد)
-      s4.addChart(pptx.charts.BAR, [
+      // رسم بياني مرتبط بالإكسيل، بألوان العربي
+      s4.addChart(pptx.charts.BAR,[
         { name: 'قبل التحسين', labels: secs.map(s => s.label), values: secs.map(s => s.pctBefore) },
         { name: 'بعد التحسين', labels: secs.map(s => s.label), values: secs.map(s => s.pctAfter) }
       ], { 
@@ -2116,15 +2174,15 @@ const SmartPPTEngine = {
       }
     }
 
-    // ── الشريحة 5: خطة العمل والقرارات ──
+    // ── الشريحة: خطة العمل والقرارات ──
     const s5 = pptx.addSlide();
     s5.background = { color: c.bg };
-    addHeaderAndFooter(s5, "خطة العمل والقرارات التنفيذية الموصى بها", "📋", secs.length > 0 ? 5 : 4);
+    addHeaderAndFooter(s5, "خطة العمل والقرارات التنفيذية الموصى بها", "📋", currentSlideNum++);
 
     s5.addShape(pptx.ShapeType.rect, { x: 0.5, y: 1.2, w: 12.3, h: 0.8, fill: { color: c.primary } });
     s5.addText("الخطوات التالية المقترحة بناءً على تحليل البيانات:", { x: 1, y: 1.35, w: 11.3, h: 0.5, fontSize: 20, bold: true, color: 'FFFFFF', rtlMode: true, align: 'right' });
 
-    const actions = [
+    const actions =[
       { t: "مراجعة سياسة تخصيص المساحات", d: "إعادة التفاوض مع الفروع التي أظهرت تراجعاً أو ثباتاً لزيادة حصة العرض لمنتجات العربي.", icon: "🏢" },
       { t: "تكثيف المتابعة الميدانية", d: "توجيه فريق المندوبين للتركيز على الأقسام ذات الأداء المنخفض (أقل من 50%).", icon: "👥" },
       { t: "دعم نقاط البيع (POSM)", d: "توفير مواد إعلانية ومطبوعات داعمة للأقسام التي تعاني من بطء في معدلات التطور.", icon: "📢" },
@@ -2200,6 +2258,103 @@ function showToast(msg,type='ok') {
   void t.offsetWidth;
   t.classList.add('show');
   _tt=setTimeout(()=>{t.classList.remove('show');_tt=null;},3500);
+}
+
+let currentEditingReportId = null;
+
+// فتح مودال التعديل وجلب بيانات التقرير
+function openEditReport(reportId) {
+  const report = reports.find(r => r._docId === reportId);
+  if (!report) return showToast("التقرير غير موجود", "err");
+
+  currentEditingReportId = reportId;
+  const info = document.getElementById('editReportInfo');
+  info.innerHTML = `<strong>الفرع:</strong> ${report.branch} | <strong>المندوب:</strong> ${report.agent} | <strong>التاريخ:</strong> ${report.timestamp}`;
+
+  const tbody = document.getElementById('editSectionsBody');
+  tbody.innerHTML = '';
+
+  if (report.sections && report.sections.length > 0) {
+    report.sections.forEach((sec, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-weight:700; color:var(--pl)">${sec.label}</td>
+        <td><input type="number" class="edit-input" value="${sec.arabiB || 0}" onchange="updateLocalSec(${idx}, 'arabiB', this.value)"></td>
+        <td><input type="number" class="edit-input" value="${sec.totalB || 0}" onchange="updateLocalSec(${idx}, 'totalB', this.value)"></td>
+        <td><input type="number" class="edit-input" value="${sec.arabiA || 0}" onchange="updateLocalSec(${idx}, 'arabiA', this.value)"></td>
+        <td><input type="number" class="edit-input" value="${sec.totalA || 0}" onchange="updateLocalSec(${idx}, 'totalA', this.value)"></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } else {
+    tbody.innerHTML = '<tr><td colspan="5">لا توجد أقسام مسجلة في هذا التقرير (تقرير قديم)</td></tr>';
+  }
+
+  document.getElementById('editReportModal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+  document.getElementById('editReportModal').classList.add('hidden');
+  currentEditingReportId = null;
+}
+
+// تحديث القيم في المصفوفة المحلية مؤقتاً قبل الحفظ
+function updateLocalSec(index, field, value) {
+  const report = reports.find(r => r._docId === currentEditingReportId);
+  if (report && report.sections[index]) {
+    report.sections[index][field] = parseInt(value) || 0;
+  }
+}
+
+// حفظ التعديلات في Firebase
+async function saveReportChanges() {
+  if (!currentEditingReportId) return;
+  const btn = document.getElementById('saveReportBtn');
+  const report = reports.find(r => r._docId === currentEditingReportId);
+
+  // إعادة حساب الإجماليات والنسب بناءً على الأرقام الجديدة
+  let totalAA = 0, totalTA = 0, totalAB = 0, totalTB = 0;
+  report.sections.forEach(s => {
+    totalAA += s.arabiA; totalTA += s.totalA;
+    totalAB += s.arabiB; totalTB += s.totalB;
+  });
+
+  const avgAfter = totalTA > 0 ? +((totalAA / totalTA) * 100).toFixed(1) : 0;
+  const avgBefore = totalTB > 0 ? +((totalAB / totalTB) * 100).toFixed(1) : 0;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> جاري الحفظ...';
+
+  try {
+    if (db) {
+      await db.collection('reports').doc(currentEditingReportId).update({
+        sections: report.sections,
+        totalAA, totalTA, totalAB, totalTB,
+        avgAfter, avgBefore,
+        arabi: totalAA, // للمتوافقية مع التقارير القديمة
+        total: totalTA,
+        pct: avgAfter
+      });
+    }
+    showToast("تم تحديث بيانات التقرير بنجاح");
+    closeEditModal();
+    await loadReports(); // إعادة تحميل البيانات لتحديث اللوحة
+  } catch (e) {
+    showToast("خطأ أثناء الحفظ: " + e.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "💾 حفظ التعديلات";
+  }
+}
+function showBranchReportsList(branchName) {
+    // سنقوم بالانتقال لتبويب التقارير مع عمل فلترة تلقائية لهذا الفرع
+    const rptBranchFilter = document.getElementById('rptBranchFilter');
+    if(rptBranchFilter) {
+        rptBranchFilter.value = branchName;
+        showTab('reports');
+        renderReportsTable();
+        showToast("عرض تقارير فرع: " + branchName, "info");
+    }
 }
 </script>
 </body>
