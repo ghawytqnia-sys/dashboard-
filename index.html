@@ -515,18 +515,142 @@ function renderSections() {
   data.forEach(s=>{ const {cls,label}=ratingInfo(s.pctAfter); const dc=s.diff>0?'#34d399':s.diff<0?'#f87171':'#7dd3fc'; const tr=document.createElement('tr'); tr.innerHTML=`<td style="font-weight:700;color:var(--pl)">${SEC_ICONS[s.label]||'📦'} ${s.label}</td><td style="color:#f87171">${s.arabiB}</td><td>${s.totalB}</td><td style="font-weight:700;color:#f87171">${s.pctBefore}%</td><td style="color:#34d399">${s.arabiA}</td><td>${s.totalA}</td><td style="font-weight:700;color:#34d399">${s.pctAfter}%</td><td style="font-weight:900;color:${dc}">${s.diff>0?'+':''}${s.diff}%</td><td><span class="badge ${cls}">${label}</span></td>`; tbody.appendChild(tr); });
 }
 
+// دالة صفحة المقارنة (التي كانت مفقودة)
+function renderComparePage() {
+  const container = document.getElementById('compareContent');
+  if (!container) return;
+
+  // جلب التقارير من نوع "قبل وبعد" فقط
+  const newReports = reports.filter(r => r._isNew);
+
+  if (newReports.length === 0) {
+    container.innerHTML = `<div class="no-data"><span class="nd-ico">🔄</span><h3>لا توجد بيانات مقارنة</h3><p>أضف تقارير بصيغة "قبل/بعد" لتفعيل هذه الصفحة.</p></div>`;
+    return;
+  }
+
+  // حساب الإجماليات
+  let tb = 0, ab = 0, ta = 0, aa = 0;
+  newReports.forEach(r => {
+    tb += (r.totalTB || 0);
+    ab += (r.totalAB || 0);
+    ta += (r.totalTA || r._totalAll || 0);
+    aa += (r.totalAA || r._totalArabi || 0);
+  });
+
+  const pctB = tb > 0 ? ((ab / tb) * 100).toFixed(1) : 0;
+  const pctA = ta > 0 ? ((aa / ta) * 100).toFixed(1) : 0;
+  const diff = (pctA - pctB).toFixed(1);
+  const isPos = diff > 0;
+
+  let html = `
+    <div class="page-title">
+      <h2>🔄 مقارنة الأداء العام (قبل / بعد)</h2>
+      <p>تحليل تأثير التحسينات على نسب العرض</p>
+    </div>
+
+    <div class="cmp-hero">
+      <div class="cmp-side before">
+        <div class="cmp-side-tag">قبل التحسين</div>
+        <div class="cmp-big-pct">${pctB}%</div>
+        <div class="cmp-meta-row">
+          <div class="cmp-meta"><div class="cmp-meta-v">${ab.toLocaleString()}</div><div class="cmp-meta-l">العربي</div></div>
+          <div class="cmp-meta"><div class="cmp-meta-v">${tb.toLocaleString()}</div><div class="cmp-meta-l">الإجمالي</div></div>
+        </div>
+      </div>
+
+      <div class="cmp-arrow">
+        <div class="cmp-delta-box" style="color: ${isPos ? '#34d399' : '#f87171'}">
+          <div class="cmp-delta-val">${isPos ? '+' : ''}${diff}%</div>
+          <div class="cmp-delta-lbl">معدل التطور</div>
+        </div>
+        <div class="cmp-delta-arrow" style="color: ${isPos ? '#34d399' : '#f87171'}">${isPos ? '⬅️' : '⚠️'}</div>
+      </div>
+
+      <div class="cmp-side after">
+        <div class="cmp-side-tag">بعد التحسين</div>
+        <div class="cmp-big-pct">${pctA}%</div>
+        <div class="cmp-meta-row">
+          <div class="cmp-meta"><div class="cmp-meta-v">${aa.toLocaleString()}</div><div class="cmp-meta-l">العربي</div></div>
+          <div class="cmp-meta"><div class="cmp-meta-v">${ta.toLocaleString()}</div><div class="cmp-meta-l">الإجمالي</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card wide" style="margin-top: 20px;">
+      <div class="chart-title">📊 مقارنة تطور الفروع (قبل / بعد)</div>
+      <div class="chart-wrap tall"><canvas id="cmpBranchChart"></canvas></div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+
+  // رسم الرسم البياني الخاص بالمقارنة
+  setTimeout(() => {
+    const cmpCanvas = document.getElementById('cmpBranchChart');
+    if (cmpCanvas) {
+      if (charts.cmpBranch) charts.cmpBranch.destroy();
+      const bStats = calcBranchStats().filter(b => b.newCount > 0).sort((a,b) => b.pctAfter - a.pctAfter);
+      charts.cmpBranch = new Chart(cmpCanvas, {
+        type: 'bar',
+        data: {
+          labels: bStats.map(b => b.branch),
+          datasets: [
+            { label: 'قبل التحسين %', data: bStats.map(b => b.pctBefore), backgroundColor: 'rgba(248,113,113,0.8)', borderRadius: 4 },
+            { label: 'بعد التحسين %', data: bStats.map(b => b.pctAfter), backgroundColor: 'rgba(52,211,153,0.8)', borderRadius: 4 }
+          ]
+        },
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false, 
+          scales: { y: { beginAtZero: true, max: 100 } },
+          plugins: { legend: { position: 'top' } }
+        }
+      });
+    }
+  }, 100);
+}
+
 function renderReportsTable() {
-  const brF = document.getElementById('rptBranchFilter')?.value||''; const agF = document.getElementById('rptAgentFilter')?.value||''; const tpF = document.getElementById('rptTypeFilter')?.value||'';
+  const brF = document.getElementById('rptBranchFilter')?.value||''; 
+  const agF = document.getElementById('rptAgentFilter')?.value||''; 
+  const tpF = document.getElementById('rptTypeFilter')?.value||'';
+  
   let data=[...reports];
-  if (brF) data=data.filter(r=>r.branch===brF); if (agF) data=data.filter(r=>r.agent===agF);
-  if (tpF==='before_after') data=data.filter(r=>r._isNew); else if (tpF==='legacy') data=data.filter(r=>!r._isNew);
+  if (brF) data=data.filter(r=>r.branch===brF); 
+  if (agF) data=data.filter(r=>r.agent===agF);
+  if (tpF==='before_after') data=data.filter(r=>r._isNew); 
+  else if (tpF==='legacy') data=data.filter(r=>!r._isNew);
+  
   filteredForDelete=[...data];
   const tbody=document.getElementById('reportsBody'); tbody.innerHTML='';
-  if (!data.length) { tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:30px;">لا توجد تقارير مطابقة</td></tr>'; return; }
+  
+  if (!data.length) { 
+      tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:30px;">لا توجد تقارير مطابقة</td></tr>'; 
+      return; 
+  }
+  
   data.forEach((r,i)=>{
-    const diff=r._isNew?+(r._pct-r._pctBefore).toFixed(1):null; const dc=diff!==null?(diff>0?'#34d399':diff<0?'#f87171':'#7dd3fc'):'#7dd3fc';
+    // الإصلاح هنا: استخدام _pctAfter بدلاً من _pct المفقود
+    const currentPct = r._pctAfter !== undefined ? r._pctAfter : (parseFloat(r.pct) || 0);
+    const diff = r._isNew ? +(currentPct - r._pctBefore).toFixed(1) : null; 
+    const dc = diff !== null ? (diff > 0 ? '#34d399' : diff < 0 ? '#f87171' : '#7dd3fc') : '#7dd3fc';
+    
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${i+1}</td><td style="font-weight:700;color:var(--pl)">${r.branch||'—'}</td><td>${r.agent||'—'}</td><td><span class="tag ${r._isNew?'ba':''}">${r._isNew?'🔄 قبل/بعد':'📋 قديم'}</span></td><td style="color:#f87171">${r._isNew?r._pctBefore+'%':'—'}</td><td style="color:#34d399">${r._pct||0}%</td><td style="font-weight:700;color:${dc}">${diff!==null?(diff>0?'+':'')+diff+'%':'—'}</td><td>${(r._totalAll||0)}</td><td>${(r._totalArabi||0)}</td><td style="font-size:10px">${r.timestamp||'—'}</td><td><button class="act-btn view" onclick="openEditReport('${r._docId}')">📝 تعديل</button><br><button class="act-btn del" style="margin-top:4px" onclick="openDeleteModal('${r._docId||''}','${r.branch||'—'}')">🗑️ حذف</button></td>`;
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td style="font-weight:700;color:var(--pl)">${r.branch||'—'}</td>
+      <td>${r.agent||'—'}</td>
+      <td><span class="tag ${r._isNew?'ba':''}">${r._isNew?'🔄 قبل/بعد':'📋 قديم'}</span></td>
+      <td style="color:#f87171">${r._isNew?r._pctBefore+'%':'—'}</td>
+      <td style="color:#34d399">${currentPct}%</td>
+      <td style="font-weight:700;color:${dc}">${diff!==null?(diff>0?'+':'')+diff+'%':'—'}</td>
+      <td>${(r._totalAll||0)}</td>
+      <td>${(r._totalArabi||0)}</td>
+      <td style="font-size:10px">${r.timestamp||'—'}</td>
+      <td>
+        <button class="act-btn view" onclick="openEditReport('${r._docId}')">📝 تعديل</button><br>
+        <button class="act-btn del" style="margin-top:4px" onclick="openDeleteModal('${r._docId||''}','${r.branch||'—'}')">🗑️ حذف</button>
+      </td>`;
     tbody.appendChild(tr);
   });
 }
